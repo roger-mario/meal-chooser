@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 export async function generateMetadata({ params }: PageProps<"/s/[token]">): Promise<Metadata> {
   const meal = await getSharedMeal((await params).token);
   return {
-    title: meal ? `${meal.name} · Meal Chooser` : "Meal Chooser",
+    title: meal ? `${meal.name} · Otao` : "Otao",
     robots: { index: false },
   };
 }
@@ -25,7 +25,7 @@ export default async function SharedMealPage({ params }: PageProps<"/s/[token]">
     <>
       <header className="border-b border-stone-200 bg-white">
         <div className="mx-auto flex max-w-5xl items-center gap-2 px-4 py-3 text-lg font-semibold tracking-tight">
-          <span className="text-2xl">🍲</span> Meal Chooser
+          <span className="text-2xl">🍲</span> Otao
           <span className="ml-auto rounded-full bg-stone-100 px-3 py-1 text-xs font-normal text-stone-500">
             Shared recipe · view only
           </span>

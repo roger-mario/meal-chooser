@@ -32,6 +32,7 @@ export const categoryInputSchema = z.object({
 });
 export type CategoryInput = z.infer<typeof categoryInputSchema>;
 
+// Kept as "meal-chooser" (the app's old name) so older backups still import.
 export const BACKUP_APP = "meal-chooser";
 
 export const backupSchema = z.object({

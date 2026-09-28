@@ -1,4 +1,4 @@
-# Meal Chooser
+# Otao
 
 Save your favourite meals with a picture, shopping list and cooking instructions, group them into categories
 (e.g. "Weekly meal", "Baby dinner"), chat about them, and see AI estimates of Migros prices and of calories,

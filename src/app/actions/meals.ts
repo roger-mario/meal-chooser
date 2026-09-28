@@ -154,6 +154,7 @@ export async function estimateMealNutrition(
   const [meal] = await db().select().from(meals).where(eq(meals.id, id));
   if (!meal) return { error: "Meal not found" };
   if (!aiAvailable()) return { error: "AI estimates are not set up. Enter the values manually below." };
+  if (meal.ingredients.length === 0) return { error: "Add ingredients to the meal first." };
   if (isRunning(meal.nutritionJobStartedAt)) return null;
   await db().update(meals).set({ nutritionJobStartedAt: new Date(), nutritionJobError: null }).where(eq(meals.id, id));
   after(async () => {

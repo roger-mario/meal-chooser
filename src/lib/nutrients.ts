@@ -81,6 +81,8 @@ export type NutritionEstimate = {
   summary?: string;
   assumptions?: string[];
   model?: string;
+  /** AI estimates: how much of each ingredient the whole recipe uses, the basis of the calculation. */
+  ingredients?: { name: string; grams: number }[];
 };
 
 /** Whether AI nutrition estimates are configured for this deployment. */

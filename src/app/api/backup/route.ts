@@ -7,7 +7,7 @@ export async function GET() {
   return new Response(JSON.stringify(backup, null, 2), {
     headers: {
       "Content-Type": "application/json",
-      "Content-Disposition": `attachment; filename="meal-chooser-backup-${todayISO()}.json"`,
+      "Content-Disposition": `attachment; filename="otao-backup-${todayISO()}.json"`,
       "Cache-Control": "no-store",
     },
   });

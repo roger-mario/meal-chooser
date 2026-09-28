@@ -18,9 +18,9 @@ export async function importBackup(_prev: ImportState, formData: FormData): Prom
   try {
     parsed = backupSchema.safeParse(JSON.parse(await file.text()));
   } catch {
-    return { error: "This file is not a Meal Chooser backup (not valid JSON)." };
+    return { error: "This file is not an Otao backup (not valid JSON)." };
   }
-  if (!parsed.success) return { error: "This file is not a Meal Chooser backup, or it is damaged." };
+  if (!parsed.success) return { error: "This file is not an Otao backup, or it is damaged." };
   const backup = parsed.data;
 
   try {

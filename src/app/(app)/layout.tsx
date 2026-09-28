@@ -16,7 +16,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
       <header className="sticky top-0 z-10 border-b border-stone-200 bg-white/90 backdrop-blur">
         <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-x-5 gap-y-2 px-4 py-3">
           <Link href="/" className="flex items-center gap-2 text-lg font-semibold tracking-tight text-stone-900">
-            <span className="text-2xl">🍲</span> Meal Chooser
+            <span className="text-2xl">🍲</span> Otao
           </Link>
           <nav className="order-last flex w-full gap-1 text-sm sm:order-none sm:w-auto">
             {nav.map((n) => (
