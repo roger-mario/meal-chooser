@@ -51,5 +51,5 @@ export async function estimateNutrition(meal: Meal): Promise<NutritionEstimate> 
     prompt,
   });
 
-  return { ...output, servings: meal.servings, model };
+  return { ...output, servings: meal.servings, source: "ai", model };
 }

@@ -1,6 +1,7 @@
 import { NUTRIENT_GROUPS, NUTRIENTS, type NutritionEstimate } from "@/lib/nutrients";
 
-function fmt(value: number, unit: string) {
+function fmt(value: number | undefined, unit: string) {
+  if (value == null) return "–";
   const digits = value >= 100 ? 0 : value >= 10 ? 1 : value >= 1 ? 1 : 2;
   return `${value.toFixed(digits)} ${unit}`;
 }
@@ -8,11 +9,12 @@ function fmt(value: number, unit: string) {
 export function NutritionPanel({ nutrition }: { nutrition: NutritionEstimate }) {
   const { perServing } = nutrition;
   const headline = [
-    { label: "Calories", value: `${Math.round(perServing.calories)}`, unit: "kcal" },
-    { label: "Protein", value: perServing.protein.toFixed(0), unit: "g" },
-    { label: "Carbs", value: perServing.carbohydrates.toFixed(0), unit: "g" },
-    { label: "Fat", value: perServing.fat.toFixed(0), unit: "g" },
-  ];
+    { label: "Calories", value: perServing.calories, unit: "kcal" },
+    { label: "Protein", value: perServing.protein, unit: "g" },
+    { label: "Carbs", value: perServing.carbohydrates, unit: "g" },
+    { label: "Fat", value: perServing.fat, unit: "g" },
+  ].map((h) => ({ ...h, value: h.value == null ? "–" : Math.round(h.value).toString() }));
+  const assumptions = nutrition.assumptions ?? [];
 
   return (
     <div className="space-y-5">
@@ -28,7 +30,7 @@ export function NutritionPanel({ nutrition }: { nutrition: NutritionEstimate }) 
         ))}
       </div>
 
-      <p className="text-sm text-stone-600">{nutrition.summary}</p>
+      {nutrition.summary && <p className="text-sm text-stone-600">{nutrition.summary}</p>}
 
       {NUTRIENT_GROUPS.filter((g) => g.group !== "energy").map((g) => (
         <div key={g.group}>
@@ -36,9 +38,9 @@ export function NutritionPanel({ nutrition }: { nutrition: NutritionEstimate }) 
           <table className="w-full text-sm">
             <tbody>
               {NUTRIENTS.filter((n) => n.group === g.group).map((n) => {
-                const value = perServing[n.key] ?? 0;
+                const value = perServing[n.key];
                 const dv = "dailyValue" in n ? n.dailyValue : undefined;
-                const pct = dv ? Math.round((value / dv) * 100) : null;
+                const pct = dv && value != null ? Math.round((value / dv) * 100) : null;
                 return (
                   <tr key={n.key} className="border-t border-stone-100">
                     <td className="py-1.5">{n.label}</td>
@@ -64,18 +66,21 @@ export function NutritionPanel({ nutrition }: { nutrition: NutritionEstimate }) 
         </div>
       ))}
 
-      {nutrition.assumptions.length > 0 && (
+      {assumptions.length > 0 && (
         <details className="text-sm text-stone-600">
-          <summary className="cursor-pointer font-medium">Assumptions ({nutrition.assumptions.length})</summary>
+          <summary className="cursor-pointer font-medium">Assumptions ({assumptions.length})</summary>
           <ul className="mt-2 list-disc space-y-1 pl-5">
-            {nutrition.assumptions.map((a, i) => (
+            {assumptions.map((a, i) => (
               <li key={i}>{a}</li>
             ))}
           </ul>
         </details>
       )}
       <p className="text-xs text-stone-400">
-        AI estimate per serving, {nutrition.confidence} confidence. % of adult daily value. Not medical advice.
+        {nutrition.source === "manual"
+          ? "Entered manually, per serving."
+          : `AI estimate per serving${nutrition.confidence ? `, ${nutrition.confidence} confidence` : ""}.`}{" "}
+        % of adult daily value. Not medical advice.
       </p>
     </div>
   );

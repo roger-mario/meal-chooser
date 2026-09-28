@@ -41,7 +41,7 @@ export default async function MealsPage({ searchParams }: PageProps<"/">) {
                 <div className="space-y-2 p-4">
                   <div className="flex items-start justify-between gap-2">
                     <h2 className="font-semibold">{m.name}</h2>
-                    {m.nutrition && (
+                    {m.nutrition?.perServing.calories != null && (
                       <span className="shrink-0 text-sm text-stone-500">
                         {Math.round(m.nutrition.perServing.calories)} kcal
                       </span>

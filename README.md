@@ -16,9 +16,13 @@ month, and see an AI estimate of calories, macros and micronutrients (vitamins, 
 1. Import the GitHub repo in Vercel.
 2. In the project's **Storage** tab, add a **Neon** Postgres database and a **Blob** store. Both inject their
    environment variables automatically.
-3. Enable **AI Gateway** for the project and set `AI_MODEL` to a model id from the gateway's model list.
-4. Set `APP_TIMEZONE` (and optionally `APP_PASSWORD`).
-5. Deploy. The `vercel-build` script runs database migrations before building.
+3. In **Settings → Environment Variables**, add:
+   - `APP_TIMEZONE`, e.g. `Europe/Zurich` (used for "today" in the plan)
+   - `APP_PASSWORD` (optional) to protect the site; the browser asks for it, any username works
+   - `AI_MODEL` and `AI_GATEWAY_API_KEY` (optional) to turn on AI nutrition estimates. Without them,
+     nutrition values are entered manually on each meal.
+4. Redeploy so the new variables take effect.
+The `vercel-build` script runs database migrations on every deploy. It finds the connection string in `DATABASE_URL`, `POSTGRES_URL`, or a prefixed variant such as `MEAL_DB_DATABASE_URL`.
 
 ## Local development
 

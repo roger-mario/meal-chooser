@@ -72,11 +72,18 @@ export const NUTRIENT_GROUPS: { group: NutrientGroup; label: string }[] = [
 ];
 
 export type NutritionEstimate = {
-  /** Values are per single serving. */
-  perServing: Record<NutrientKey, number>;
+  /** Values are per single serving. Manually entered data may leave some out. */
+  perServing: Partial<Record<NutrientKey, number>>;
   servings: number;
-  confidence: "low" | "medium" | "high";
-  summary: string;
-  assumptions: string[];
-  model: string;
+  /** "ai" = estimated by the AI provider, "manual" = typed in by the user. */
+  source?: "ai" | "manual";
+  confidence?: "low" | "medium" | "high";
+  summary?: string;
+  assumptions?: string[];
+  model?: string;
 };
+
+/** Whether AI nutrition estimates are configured for this deployment. */
+export function aiAvailable() {
+  return Boolean(process.env.AI_MODEL);
+}

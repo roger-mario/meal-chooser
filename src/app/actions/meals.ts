@@ -5,6 +5,7 @@ import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db, mealCategories, meals } from "@/db";
+import { aiAvailable, NUTRIENTS, type NutritionEstimate } from "@/lib/nutrients";
 import { estimateNutrition } from "@/lib/nutrition-ai";
 
 function parseMealForm(formData: FormData) {
@@ -106,6 +107,7 @@ export async function estimateMealNutrition(
 ): Promise<{ error?: string } | null> {
   const [meal] = await db().select().from(meals).where(eq(meals.id, id));
   if (!meal) return { error: "Meal not found" };
+  if (!aiAvailable()) return { error: "AI estimates are not set up. Enter the values manually below." };
   try {
     const nutrition = await estimateNutrition(meal);
     await db()
@@ -118,4 +120,27 @@ export async function estimateMealNutrition(
   }
   revalidatePath(`/meals/${id}`);
   return null;
+}
+
+export async function saveManualNutrition(id: number, formData: FormData) {
+  const [meal] = await db().select().from(meals).where(eq(meals.id, id));
+  if (!meal) throw new Error("Meal not found");
+
+  const perServing: NutritionEstimate["perServing"] = {};
+  for (const n of NUTRIENTS) {
+    const raw = String(formData.get(n.key) ?? "").trim().replace(",", ".");
+    const value = Number(raw);
+    if (raw !== "" && Number.isFinite(value) && value >= 0) perServing[n.key] = value;
+  }
+  const notes = String(formData.get("notes") ?? "").trim();
+
+  const nutrition: NutritionEstimate | null =
+    Object.keys(perServing).length > 0
+      ? { perServing, servings: meal.servings, source: "manual", summary: notes || undefined }
+      : null;
+  await db()
+    .update(meals)
+    .set({ nutrition, nutritionEstimatedAt: nutrition ? new Date() : null })
+    .where(eq(meals.id, id));
+  revalidatePath("/", "layout");
 }

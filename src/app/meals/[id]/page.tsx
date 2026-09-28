@@ -4,8 +4,10 @@ import { deleteMeal } from "@/app/actions/meals";
 import { CategoryChip } from "@/components/CategoryChip";
 import { EstimateButton } from "@/components/EstimateButton";
 import { MealImage } from "@/components/MealImage";
+import { NutritionForm } from "@/components/NutritionForm";
 import { NutritionPanel } from "@/components/NutritionPanel";
 import { SubmitButton } from "@/components/SubmitButton";
+import { aiAvailable } from "@/lib/nutrients";
 import { getMeal } from "@/lib/queries";
 
 export const dynamic = "force-dynamic";
@@ -14,6 +16,7 @@ export default async function MealPage({ params }: PageProps<"/meals/[id]">) {
   const { id } = await params;
   const meal = await getMeal(Number(id));
   if (!meal) notFound();
+  const ai = aiAvailable();
 
   return (
     <div className="space-y-6">
@@ -72,16 +75,18 @@ export default async function MealPage({ params }: PageProps<"/meals/[id]">) {
         <section className="card space-y-4 p-6 lg:col-span-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 className="text-lg font-semibold">Nutrition per serving</h2>
-            <EstimateButton mealId={meal.id} hasEstimate={!!meal.nutrition} />
+            {ai && <EstimateButton mealId={meal.id} hasEstimate={!!meal.nutrition} />}
           </div>
           {meal.nutrition ? (
             <NutritionPanel nutrition={meal.nutrition} />
           ) : (
             <p className="text-sm text-stone-500">
-              No estimate yet. The AI estimates calories, macros, fats, and all vitamins and minerals from the
-              shopping list and cooking method.
+              {ai
+                ? "No values yet. Let the AI estimate calories, macros, fats, vitamins and minerals from the shopping list and cooking method, or enter them yourself."
+                : "No values yet. Enter them below, for example from the package label or a nutrition app."}
             </p>
           )}
+          <NutritionForm mealId={meal.id} nutrition={meal.nutrition} open={!ai && !meal.nutrition} />
         </section>
       </div>
     </div>
