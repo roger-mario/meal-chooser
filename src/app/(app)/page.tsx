@@ -1,4 +1,3 @@
-import Image from "next/image";
 import Link from "next/link";
 import { CategoryFilter } from "@/components/CategoryFilter";
 import { MealCard } from "@/components/MealCard";
@@ -6,12 +5,10 @@ import { SearchBox } from "@/components/SearchBox";
 import { SortSelect } from "@/components/SortSelect";
 import { formatDay, todayISO } from "@/lib/dates";
 import { parseSort, sortMeals } from "@/lib/meal-sort";
-import { categoryCounts, commentCounts, listCategories, listMeals, planForDay } from "@/lib/queries";
+import { categoryCounts, commentCounts, listCategories, listMeals } from "@/lib/queries";
 import { getCurrentUser } from "@/lib/users";
 
 export const dynamic = "force-dynamic";
-
-const SLOT_EMOJI = { breakfast: "🍳", lunch: "🥪", dinner: "🍝", snack: "🍎" } as const;
 
 function greeting() {
   const hour = Number(
@@ -30,12 +27,11 @@ export default async function MealsPage({ searchParams }: PageProps<"/">) {
   const query = typeof q === "string" ? q.trim() : "";
   const sort = parseSort(sortParam);
   const today = todayISO();
-  const [found, categories, counts, chats, plan, me] = await Promise.all([
+  const [found, categories, counts, chats, me] = await Promise.all([
     listMeals({ categoryId, q: query }),
     listCategories(),
     categoryCounts(),
     commentCounts(),
-    planForDay(today),
     getCurrentUser(),
   ]);
   const meals = sortMeals(found, sort);
@@ -56,40 +52,6 @@ export default async function MealsPage({ searchParams }: PageProps<"/">) {
           <Link href={categoryId ? `/random?category=${categoryId}` : "/random"} className="btn" prefetch={false}>
             🎲 Surprise me
           </Link>
-        </div>
-
-        <div className="card flex items-center gap-3 overflow-x-auto p-3">
-          <Link href="/plan" className="shrink-0 rounded-lg px-2 text-sm font-semibold whitespace-nowrap text-stone-700 hover:text-emerald-700">
-            📅 Today
-          </Link>
-          {plan.length === 0 ? (
-            <p className="text-sm text-stone-500">
-              Nothing planned yet.{" "}
-              <Link href="/plan" className="font-medium text-emerald-700 hover:underline">
-                Plan your meals →
-              </Link>
-            </p>
-          ) : (
-            plan.map((e) => (
-              <Link
-                key={e.slot}
-                href={`/meals/${e.mealId}`}
-                className="flex shrink-0 items-center gap-2 rounded-xl border border-stone-200 bg-stone-50 py-1 pr-3 pl-1 hover:border-emerald-600"
-              >
-                <span className="relative flex h-9 w-9 items-center justify-center overflow-hidden rounded-lg bg-amber-50 text-lg">
-                  {e.imageUrl ? (
-                    <Image src={e.imageUrl} alt="" fill sizes="36px" className="object-cover" unoptimized={e.imageUrl.startsWith("/")} />
-                  ) : (
-                    SLOT_EMOJI[e.slot]
-                  )}
-                </span>
-                <span className="leading-tight">
-                  <span className="block text-[11px] text-stone-500 capitalize">{e.slot}</span>
-                  <span className="block max-w-44 truncate text-sm font-medium">{e.name}</span>
-                </span>
-              </Link>
-            ))
-          )}
         </div>
       </section>
 

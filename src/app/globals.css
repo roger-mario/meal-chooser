@@ -27,3 +27,12 @@ body {
 @utility card {
   @apply rounded-xl border border-stone-200 bg-white shadow-sm;
 }
+
+@keyframes ai-progress {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(300%);
+  }
+}

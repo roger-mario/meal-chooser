@@ -36,6 +36,13 @@
       "when": 1790598239766,
       "tag": "0004_users_comments",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1790602221771,
+      "tag": "0005_ai_jobs_drop_plan",
+      "breakpoints": true
     }
   ]
 }

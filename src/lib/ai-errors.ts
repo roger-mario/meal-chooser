@@ -1,5 +1,19 @@
 import "server-only";
 
+/** Background estimates normally finish within a minute; older ones were cut off and count as failed. */
+export const JOB_TIMEOUT_MS = 150_000;
+
+export function isRunning(startedAt: Date | null | undefined) {
+  return !!startedAt && Date.now() - startedAt.getTime() < JOB_TIMEOUT_MS;
+}
+
+/** Status of a background estimate, for the page. */
+export function jobStatus(startedAt: Date | null, error: string | null) {
+  if (isRunning(startedAt)) return { running: true as const, startedAt: startedAt!.toISOString(), error: null };
+  if (startedAt) return { running: false as const, startedAt: null, error: "The estimate took too long and was stopped. Please try again." };
+  return { running: false as const, startedAt: null, error };
+}
+
 type ErrorLike = { name?: string; type?: string; message?: string; statusCode?: number; lastError?: unknown; cause?: unknown };
 
 function unwrap(e: unknown): ErrorLike {

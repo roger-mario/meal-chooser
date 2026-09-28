@@ -5,7 +5,6 @@ import { WhoAreYou } from "@/components/WhoAreYou";
 import { getCurrentUser, listUsers } from "@/lib/users";
 
 const nav = [
-  { href: "/plan", label: "📅 Plan" },
   { href: "/cook", label: "🧺 What can I cook?" },
   { href: "/help", label: "❓ Help" },
 ];

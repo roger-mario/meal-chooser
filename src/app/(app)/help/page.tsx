@@ -110,7 +110,7 @@ export default async function HelpPage() {
       <Section id="backup" title="💾 Backup & restore">
         <p>
           A backup is one file with all your <b>meals and categories</b> (ingredients, steps, links, prices and
-          nutrition). Photos and the meal plan are not included.
+          nutrition). Photos and chat messages are not included.
         </p>
         <p>
           <a href="/api/backup" className="btn-primary">
@@ -173,7 +173,7 @@ export default async function HelpPage() {
             <code>APP_PASSWORD</code>: a simple shared password for the whole app (shared meals stay viewable).
           </li>
           <li>
-            <code>APP_TIMEZONE</code>: your time zone for &quot;today&quot; in the plan, e.g. Europe/Zurich.
+            <code>APP_TIMEZONE</code>: your time zone for dates and chat times, e.g. Europe/Zurich.
           </li>
         </ul>
       </Section>

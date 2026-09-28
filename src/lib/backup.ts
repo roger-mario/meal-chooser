@@ -4,7 +4,7 @@ import { categories, db } from "@/db";
 import { BACKUP_APP, type Backup } from "./meal-input";
 import { listMeals } from "./queries";
 
-/** Everything except photos and the meal plan. */
+/** Everything except photos and chat messages. */
 export async function buildBackup(): Promise<Backup> {
   const [cats, meals] = await Promise.all([
     db().select().from(categories).orderBy(asc(categories.name)),

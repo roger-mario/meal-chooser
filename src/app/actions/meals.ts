@@ -3,12 +3,13 @@
 import { randomBytes } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { redirect } from "next/navigation";
 import { db, mealCategories, meals } from "@/db";
 import { aiAvailable, NUTRIENTS, type NutritionEstimate } from "@/lib/nutrients";
 import { COST_STORE, type CostEstimate, type CostItem } from "@/lib/cost";
 import { estimateCost } from "@/lib/cost-ai";
-import { aiErrorMessage } from "@/lib/ai-errors";
+import { aiErrorMessage, isRunning } from "@/lib/ai-errors";
 import { deleteMealImage, ImageUploadError, uploadMealImage } from "@/lib/blob";
 import { DIETS, DIFFICULTIES, sanitizeIngredients, sanitizeLinks, type Ingredient, type MealLink } from "@/lib/meal-fields";
 import { estimateNutrition } from "@/lib/nutrition-ai";
@@ -142,6 +143,10 @@ export async function deleteMeal(id: number) {
   redirect("/");
 }
 
+/**
+ * Starts the AI nutrition estimate in the background and returns at once.
+ * The page shows a status while `nutritionJobStartedAt` is set and refreshes until it's done.
+ */
 export async function estimateMealNutrition(
   id: number,
   _prev: { error?: string } | null,
@@ -149,16 +154,23 @@ export async function estimateMealNutrition(
   const [meal] = await db().select().from(meals).where(eq(meals.id, id));
   if (!meal) return { error: "Meal not found" };
   if (!aiAvailable()) return { error: "AI estimates are not set up. Enter the values manually below." };
-  try {
-    const nutrition = await estimateNutrition(meal);
-    await db()
-      .update(meals)
-      .set({ nutrition, nutritionEstimatedAt: new Date() })
-      .where(eq(meals.id, id));
-  } catch (e) {
-    console.error("Nutrition estimate failed", e);
-    return { error: aiErrorMessage(e) };
-  }
+  if (isRunning(meal.nutritionJobStartedAt)) return null;
+  await db().update(meals).set({ nutritionJobStartedAt: new Date(), nutritionJobError: null }).where(eq(meals.id, id));
+  after(async () => {
+    try {
+      const nutrition = await estimateNutrition(meal);
+      await db()
+        .update(meals)
+        .set({ nutrition, nutritionEstimatedAt: new Date(), nutritionJobStartedAt: null })
+        .where(eq(meals.id, id));
+    } catch (e) {
+      console.error("Nutrition estimate failed", e);
+      await db()
+        .update(meals)
+        .set({ nutritionJobStartedAt: null, nutritionJobError: aiErrorMessage(e) })
+        .where(eq(meals.id, id));
+    }
+  });
   revalidatePath(`/meals/${id}`);
   return null;
 }
@@ -186,19 +198,30 @@ export async function saveManualNutrition(id: number, formData: FormData) {
   revalidatePath("/", "layout");
 }
 
+/** Starts the AI price estimate in the background; see estimateMealNutrition. */
 export async function estimateMealCost(id: number, _prev: FormState): Promise<FormState> {
   const [meal] = await db().select().from(meals).where(eq(meals.id, id));
   if (!meal) return { error: "Meal not found" };
   if (!aiAvailable()) return { error: "AI estimates are not set up. Enter the prices manually below." };
   if (meal.ingredients.length === 0) return { error: "Add ingredients to the meal first." };
-  try {
-    const cost = await estimateCost(meal);
-    await db().update(meals).set({ cost, costEstimatedAt: new Date() }).where(eq(meals.id, id));
-  } catch (e) {
-    console.error("Cost estimate failed", e);
-    return { error: aiErrorMessage(e) };
-  }
-  revalidatePath("/", "layout");
+  if (isRunning(meal.costJobStartedAt)) return null;
+  await db().update(meals).set({ costJobStartedAt: new Date(), costJobError: null }).where(eq(meals.id, id));
+  after(async () => {
+    try {
+      const cost = await estimateCost(meal);
+      await db()
+        .update(meals)
+        .set({ cost, costEstimatedAt: new Date(), costJobStartedAt: null })
+        .where(eq(meals.id, id));
+    } catch (e) {
+      console.error("Cost estimate failed", e);
+      await db()
+        .update(meals)
+        .set({ costJobStartedAt: null, costJobError: aiErrorMessage(e) })
+        .where(eq(meals.id, id));
+    }
+  });
+  revalidatePath(`/meals/${id}`);
   return null;
 }
 

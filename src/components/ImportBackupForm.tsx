@@ -34,7 +34,7 @@ export function ImportBackupForm() {
         <label className="flex items-start gap-2">
           <input type="radio" name="mode" value="replace" checked={mode === "replace"} onChange={() => setMode("replace")} className="mt-1" />
           <span>
-            <b>Start fresh</b> <span className="text-stone-500">(deletes all current meals, categories, photos and plans first)</span>
+            <b>Start fresh</b> <span className="text-stone-500">(deletes all current meals, categories and photos first)</span>
           </span>
         </label>
       </div>

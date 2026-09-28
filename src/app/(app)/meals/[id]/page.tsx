@@ -10,6 +10,7 @@ import { NutritionPanel } from "@/components/NutritionPanel";
 import { ShareButton } from "@/components/ShareButton";
 import { SubmitButton } from "@/components/SubmitButton";
 import { bringLines, bringToken } from "@/lib/bring";
+import { jobStatus } from "@/lib/ai-errors";
 import { COST_STORE } from "@/lib/cost";
 import { aiAvailable } from "@/lib/nutrients";
 import { MealChat } from "@/components/MealChat";
@@ -19,7 +20,7 @@ import { getCurrentUser } from "@/lib/users";
 
 export const dynamic = "force-dynamic";
 // AI estimates can take a while.
-export const maxDuration = 60;
+export const maxDuration = 120;
 
 export default async function MealPage({ params }: PageProps<"/meals/[id]">) {
   const { id } = await params;
@@ -58,6 +59,8 @@ export default async function MealPage({ params }: PageProps<"/meals/[id]">) {
               action={estimateMealCost.bind(null, meal.id)}
               hasEstimate={!!meal.cost}
               label="Estimate prices with AI"
+              job={jobStatus(meal.costJobStartedAt, meal.costJobError)}
+              workingText={`AI is checking ${COST_STORE} prices…`}
             />
           )}
         </div>
@@ -81,6 +84,8 @@ export default async function MealPage({ params }: PageProps<"/meals/[id]">) {
               action={estimateMealNutrition.bind(null, meal.id)}
               hasEstimate={!!meal.nutrition}
               label="Estimate nutrition with AI"
+              job={jobStatus(meal.nutritionJobStartedAt, meal.nutritionJobError)}
+              workingText="AI is calculating nutrition…"
             />
           )}
         </div>

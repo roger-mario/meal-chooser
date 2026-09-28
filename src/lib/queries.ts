@@ -1,6 +1,6 @@
 import "server-only";
 import { and, asc, desc, eq, exists, ilike, inArray, or, sql, type SQL } from "drizzle-orm";
-import { categories, db, MEAL_SLOTS, mealCategories, mealComments, meals, planEntries, users, type Category, type Meal, type MealSlot } from "@/db";
+import { categories, db, mealCategories, mealComments, meals, users, type Category, type Meal } from "@/db";
 import { normalizeIngredients, normalizeSteps, type Ingredient } from "./meal-fields";
 
 export type MealAuthor = { id: number; name: string };
@@ -111,18 +111,6 @@ export async function listComments(mealId: number): Promise<ChatMessage[]> {
     .where(eq(mealComments.mealId, mealId))
     .orderBy(asc(mealComments.createdAt), asc(mealComments.id));
   return rows.map((r) => ({ ...r, author: r.author?.id ? r.author : null }));
-}
-
-export type TodayEntry = { slot: MealSlot; mealId: number; name: string; imageUrl: string | null };
-
-/** What the plan says for one day, in breakfast → snack order. */
-export async function planForDay(date: string): Promise<TodayEntry[]> {
-  const rows = await db()
-    .select({ slot: planEntries.slot, mealId: meals.id, name: meals.name, imageUrl: meals.imageUrl })
-    .from(planEntries)
-    .innerJoin(meals, eq(meals.id, planEntries.mealId))
-    .where(eq(planEntries.date, date));
-  return rows.sort((a, b) => MEAL_SLOTS.indexOf(a.slot) - MEAL_SLOTS.indexOf(b.slot));
 }
 
 /** Number of meals in each category, for the filter chips. */
