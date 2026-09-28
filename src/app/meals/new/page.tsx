@@ -7,8 +7,8 @@ export const dynamic = "force-dynamic";
 export default async function NewMealPage() {
   const categories = await listCategories();
   return (
-    <div className="mx-auto max-w-2xl space-y-4">
-      <h1 className="text-2xl font-semibold">Add a meal</h1>
+    <div className="mx-auto max-w-3xl space-y-5">
+      <h1 className="text-2xl font-semibold">New meal</h1>
       <MealForm action={createMeal} categories={categories} />
     </div>
   );

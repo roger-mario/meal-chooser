@@ -1,12 +1,15 @@
 "use server";
 
-import { put, del } from "@vercel/blob";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db, mealCategories, meals } from "@/db";
 import { aiAvailable, NUTRIENTS, type NutritionEstimate } from "@/lib/nutrients";
+import { deleteMealImage, ImageUploadError, uploadMealImage } from "@/lib/blob";
+import { DIETS, DIFFICULTIES, UNITS, type Ingredient } from "@/lib/meal-fields";
 import { estimateNutrition } from "@/lib/nutrition-ai";
+
+export type FormState = { error?: string } | null;
 
 function parseMealForm(formData: FormData) {
   const str = (k: string) => {
@@ -18,18 +21,47 @@ function parseMealForm(formData: FormData) {
     const n = v ? Number.parseInt(v, 10) : NaN;
     return Number.isFinite(n) && n > 0 ? n : null;
   };
+  const oneOf = <T extends string>(k: string, values: readonly { value: T }[]) => {
+    const v = str(k);
+    return values.find((x) => x.value === v)?.value ?? null;
+  };
+  const json = <T>(k: string, fallback: T): T => {
+    try {
+      return JSON.parse(str(k) ?? "") as T;
+    } catch {
+      return fallback;
+    }
+  };
+
   const name = str("name");
-  if (!name) throw new Error("Name is required");
+  if (!name) throw new FormError("Please give the meal a name.");
+
+  const ingredients: Ingredient[] = json<Ingredient[]>("ingredients", [])
+    .filter((i) => i && typeof i.name === "string" && i.name.trim())
+    .map((i) => {
+      const quantity = Number(i.quantity);
+      return {
+        name: i.name.trim(),
+        quantity: Number.isFinite(quantity) && quantity > 0 ? quantity : undefined,
+        unit: UNITS.some((u) => u.value === i.unit) && i.unit ? i.unit : undefined,
+        staple: Boolean(i.staple),
+      };
+    });
+  const steps = json<string[]>("steps", [])
+    .map((s) => String(s).trim())
+    .filter(Boolean);
+
   return {
     name,
     description: str("description"),
     servings: num("servings") ?? 1,
     prepMinutes: num("prepMinutes"),
-    ingredients: (str("ingredients") ?? "")
-      .split("\n")
-      .map((l) => l.trim())
-      .filter(Boolean),
-    instructions: str("instructions"),
+    cookMinutes: num("cookMinutes"),
+    difficulty: oneOf("difficulty", DIFFICULTIES),
+    diet: oneOf("diet", DIETS),
+    ingredients,
+    steps,
+    instructions: null,
     categoryIds: formData
       .getAll("categoryIds")
       .map((v) => Number(v))
@@ -37,16 +69,18 @@ function parseMealForm(formData: FormData) {
   };
 }
 
+class FormError extends Error {}
+
+function errorState(e: unknown): FormState {
+  if (e instanceof FormError || e instanceof ImageUploadError) return { error: e.message };
+  console.error(e);
+  return { error: "Something went wrong while saving. Please try again." };
+}
+
 async function uploadImage(formData: FormData): Promise<string | null> {
   const file = formData.get("image");
   if (!(file instanceof File) || file.size === 0) return null;
-  if (!file.type.startsWith("image/")) throw new Error("Only images can be uploaded");
-  const blob = await put(`meals/${file.name || "photo.jpg"}`, file, {
-    access: "public",
-    addRandomSuffix: true,
-    contentType: file.type,
-  });
-  return blob.url;
+  return uploadMealImage(file);
 }
 
 async function setCategories(mealId: number, categoryIds: number[]) {
@@ -58,51 +92,59 @@ async function setCategories(mealId: number, categoryIds: number[]) {
   }
 }
 
-export async function createMeal(formData: FormData) {
-  const { categoryIds, ...data } = parseMealForm(formData);
-  const imageUrl = await uploadImage(formData);
-  const [meal] = await db()
-    .insert(meals)
-    .values({ ...data, imageUrl })
-    .returning({ id: meals.id });
-  await setCategories(meal.id, categoryIds);
+export async function createMeal(_prev: FormState, formData: FormData): Promise<FormState> {
+  let id: number;
+  try {
+    const { categoryIds, ...data } = parseMealForm(formData);
+    const imageUrl = await uploadImage(formData);
+    const [meal] = await db()
+      .insert(meals)
+      .values({ ...data, imageUrl })
+      .returning({ id: meals.id });
+    await setCategories(meal.id, categoryIds);
+    id = meal.id;
+  } catch (e) {
+    return errorState(e);
+  }
   revalidatePath("/");
-  redirect(`/meals/${meal.id}`);
+  redirect(`/meals/${id}`);
 }
 
-export async function updateMeal(id: number, formData: FormData) {
-  const { categoryIds, ...data } = parseMealForm(formData);
-  const [existing] = await db().select().from(meals).where(eq(meals.id, id));
-  if (!existing) throw new Error("Meal not found");
+export async function updateMeal(id: number, _prev: FormState, formData: FormData): Promise<FormState> {
+  try {
+    const { categoryIds, ...data } = parseMealForm(formData);
+    const [existing] = await db().select().from(meals).where(eq(meals.id, id));
+    if (!existing) return { error: "This meal no longer exists." };
 
-  let imageUrl = existing.imageUrl;
-  const newImage = await uploadImage(formData);
-  const removeImage = formData.get("removeImage") === "on";
-  if ((newImage || removeImage) && existing.imageUrl) {
-    await del(existing.imageUrl).catch(() => {});
+    let imageUrl = existing.imageUrl;
+    const newImage = await uploadImage(formData);
+    const removeImage = formData.get("removeImage") === "on";
+    if (newImage || removeImage) {
+      await deleteMealImage(existing.imageUrl);
+      imageUrl = newImage;
+    }
+
+    await db()
+      .update(meals)
+      .set({ ...data, imageUrl, updatedAt: new Date() })
+      .where(eq(meals.id, id));
+    await setCategories(id, categoryIds);
+  } catch (e) {
+    return errorState(e);
   }
-  if (newImage) imageUrl = newImage;
-  else if (removeImage) imageUrl = null;
-
-  await db()
-    .update(meals)
-    .set({ ...data, imageUrl, updatedAt: new Date() })
-    .where(eq(meals.id, id));
-  await setCategories(id, categoryIds);
   revalidatePath("/", "layout");
   redirect(`/meals/${id}`);
 }
 
 export async function deleteMeal(id: number) {
   const [existing] = await db().delete(meals).where(eq(meals.id, id)).returning();
-  if (existing?.imageUrl) await del(existing.imageUrl).catch(() => {});
+  await deleteMealImage(existing?.imageUrl);
   revalidatePath("/", "layout");
   redirect("/");
 }
 
 export async function estimateMealNutrition(
   id: number,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   _prev: { error?: string } | null,
 ): Promise<{ error?: string } | null> {
   const [meal] = await db().select().from(meals).where(eq(meals.id, id));

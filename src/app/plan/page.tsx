@@ -13,6 +13,7 @@ import {
   weekdayIndex,
   type PlanRange,
 } from "@/lib/dates";
+import { formatQuantity, ingredientKey, normalizeIngredients, type Ingredient } from "@/lib/meal-fields";
 import { listCategories } from "@/lib/queries";
 
 export const dynamic = "force-dynamic";
@@ -38,15 +39,27 @@ export default async function PlanPage({ searchParams }: PageProps<"/plan">) {
       .innerJoin(meals, eq(meals.id, planEntries.mealId))
       .where(and(gte(planEntries.date, start), lte(planEntries.date, end)))
       .orderBy(asc(planEntries.date)),
-    db().select({ id: meals.id, name: meals.name, ingredients: meals.ingredients }).from(meals).orderBy(asc(meals.name)),
+    db().select({ id: meals.id, name: meals.name }).from(meals).orderBy(asc(meals.name)),
     listCategories(),
   ]);
   const byKey = new Map(entries.map((e) => [`${e.entry.date}|${e.entry.slot}`, e]));
 
   // Combined shopping list for everything planned in this range.
-  const shopping = new Map<string, number>();
+  // Same ingredient + unit is summed ("200 g" + "300 g" = "500 g").
+  const shopping = new Map<string, Ingredient>();
+  const basics = new Set<string>();
   for (const { meal } of entries) {
-    for (const item of meal.ingredients) shopping.set(item, (shopping.get(item) ?? 0) + 1);
+    for (const item of normalizeIngredients(meal.ingredients)) {
+      if (item.staple) {
+        basics.add(item.name.toLowerCase());
+        continue;
+      }
+      const key = `${ingredientKey(item.name)}|${item.unit ?? ""}`;
+      const prev = shopping.get(key);
+      if (!prev) shopping.set(key, { ...item });
+      else if (prev.quantity != null || item.quantity != null)
+        prev.quantity = (prev.quantity ?? 0) + (item.quantity ?? 0);
+    }
   }
 
   return (
@@ -144,21 +157,26 @@ export default async function PlanPage({ searchParams }: PageProps<"/plan">) {
       )}
 
       <section className="card p-6">
-        <h2 className="mb-3 text-lg font-semibold">Shopping list for this plan</h2>
+        <h2 className="mb-3 text-lg font-semibold">🛒 Shopping list for this plan</h2>
         {shopping.size === 0 ? (
           <p className="text-sm text-stone-500">Nothing planned yet.</p>
         ) : (
           <ul className="columns-1 gap-6 space-y-1.5 text-sm sm:columns-2">
-            {[...shopping].map(([item, times]) => (
-              <li key={item} className="flex gap-2">
-                <input type="checkbox" className="mt-0.5" aria-label={item} />
-                <span>
-                  {item}
-                  {times > 1 && <span className="text-stone-500"> ×{times}</span>}
-                </span>
+            {[...shopping].map(([key, item]) => (
+              <li key={key} className="break-inside-avoid">
+                <label className="flex cursor-pointer items-center gap-2">
+                  <input type="checkbox" className="peer h-4 w-4 accent-emerald-700" />
+                  <span className="flex-1 peer-checked:text-stone-400 peer-checked:line-through">{item.name}</span>
+                  <span className="text-stone-500 tabular-nums">{formatQuantity(item)}</span>
+                </label>
               </li>
             ))}
           </ul>
+        )}
+        {basics.size > 0 && (
+          <p className="mt-4 text-sm text-stone-500">
+            <span className="font-medium text-stone-600">🧂 Check you have:</span> {[...basics].join(", ")}
+          </p>
         )}
       </section>
     </div>

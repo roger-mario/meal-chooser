@@ -3,6 +3,7 @@ import { generateText, Output } from "ai";
 import { z } from "zod";
 import { NUTRIENTS, type NutrientKey, type NutritionEstimate } from "./nutrients";
 import type { Meal } from "@/db/schema";
+import { formatIngredient, normalizeIngredients, normalizeSteps } from "./meal-fields";
 
 const perServingShape = Object.fromEntries(
   NUTRIENTS.map((n) => [
@@ -28,12 +29,13 @@ export async function estimateNutrition(meal: Meal): Promise<NutritionEstimate> 
   const model = process.env.AI_MODEL;
   if (!model) throw new Error("AI_MODEL is not set");
 
+  const steps = normalizeSteps(meal.steps, meal.instructions);
   const prompt = [
     `Estimate the nutrition of ONE serving of this meal. The recipe makes ${meal.servings} serving(s).`,
     `Meal: ${meal.name}`,
     meal.description ? `Description: ${meal.description}` : "",
-    `Ingredients:\n${meal.ingredients.map((i) => `- ${i}`).join("\n") || "(none listed)"}`,
-    meal.instructions ? `Instructions:\n${meal.instructions}` : "",
+    `Ingredients:\n${normalizeIngredients(meal.ingredients).map((i) => `- ${formatIngredient(i)}`).join("\n") || "(none listed)"}`,
+    steps.length ? `Steps:\n${steps.map((s, i) => `${i + 1}. ${s}`).join("\n")}` : "",
     "",
     "Use standard food composition data (e.g. USDA FoodData Central).",
     "Account for cooking method (fat absorption, water loss, vitamin losses from heat).",

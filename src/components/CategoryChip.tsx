@@ -1,16 +1,15 @@
 import type { Category } from "@/db/schema";
 
-export function CategoryChip({ category, active = true }: { category: Category; active?: boolean }) {
+/** Compact category badge: just the emoji, with the name on hover (or always when `showName`). */
+export function CategoryChip({ category, showName = false }: { category: Category; showName?: boolean }) {
   return (
     <span
-      className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium"
-      style={
-        active
-          ? { backgroundColor: `${category.color}22`, color: category.color }
-          : { backgroundColor: "#f5f5f4", color: "#57534e" }
-      }
+      title={category.name}
+      className="group inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium"
+      style={{ backgroundColor: `${category.color}1f`, color: category.color }}
     >
-      {category.name}
+      <span className="text-sm leading-none">{category.emoji}</span>
+      <span className={showName ? "" : "hidden group-hover:inline"}>{category.name}</span>
     </span>
   );
 }

@@ -10,6 +10,7 @@ import {
   uniqueIndex,
 } from "drizzle-orm/pg-core";
 import type { NutritionEstimate } from "@/lib/nutrients";
+import type { Diet, Difficulty, Ingredient } from "@/lib/meal-fields";
 
 export const meals = pgTable("meals", {
   id: serial("id").primaryKey(),
@@ -18,8 +19,13 @@ export const meals = pgTable("meals", {
   imageUrl: text("image_url"),
   servings: integer("servings").notNull().default(1),
   prepMinutes: integer("prep_minutes"),
-  // Shopping list: one ingredient per entry, e.g. "200 g chicken breast".
-  ingredients: jsonb("ingredients").$type<string[]>().notNull().default([]),
+  cookMinutes: integer("cook_minutes"),
+  difficulty: text("difficulty").$type<Difficulty>(),
+  diet: text("diet").$type<Diet>(),
+  // Older rows stored plain strings like "200 g chicken"; see normalizeIngredients().
+  ingredients: jsonb("ingredients").$type<(Ingredient | string)[]>().notNull().default([]),
+  steps: jsonb("steps").$type<string[]>().notNull().default([]),
+  /** Legacy free-text instructions, replaced by `steps`. */
   instructions: text("instructions"),
   nutrition: jsonb("nutrition").$type<NutritionEstimate>(),
   nutritionEstimatedAt: timestamp("nutrition_estimated_at", { withTimezone: true }),
@@ -30,6 +36,7 @@ export const meals = pgTable("meals", {
 export const categories = pgTable("categories", {
   id: serial("id").primaryKey(),
   name: text("name").notNull().unique(),
+  emoji: text("emoji").notNull().default("🍽️"),
   color: text("color").notNull().default("#16a34a"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });

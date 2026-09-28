@@ -1,8 +1,12 @@
 import "server-only";
 import { asc, desc, eq, inArray } from "drizzle-orm";
 import { categories, db, mealCategories, meals, type Category, type Meal } from "@/db";
+import { normalizeIngredients, normalizeSteps, type Ingredient } from "./meal-fields";
 
-export type MealWithCategories = Meal & { categories: Category[] };
+export type MealWithCategories = Omit<Meal, "ingredients"> & {
+  ingredients: Ingredient[];
+  categories: Category[];
+};
 
 async function attachCategories(rows: Meal[]): Promise<MealWithCategories[]> {
   if (rows.length === 0) return [];
@@ -13,6 +17,8 @@ async function attachCategories(rows: Meal[]): Promise<MealWithCategories[]> {
     .where(inArray(mealCategories.mealId, rows.map((r) => r.id)));
   return rows.map((m) => ({
     ...m,
+    ingredients: normalizeIngredients(m.ingredients),
+    steps: normalizeSteps(m.steps, m.instructions),
     categories: links.filter((l) => l.mealId === m.id).map((l) => l.category),
   }));
 }
