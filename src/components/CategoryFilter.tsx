@@ -1,14 +1,27 @@
 "use client";
 
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { Category } from "@/db/schema";
 
 const STORAGE_KEY = "meal-chooser:show-category-names";
 
-export function CategoryFilter({ categories, activeId, q }: { categories: Category[]; activeId?: number; q?: string }) {
+export function CategoryFilter({
+  categories,
+  counts = {},
+  activeId,
+  q,
+}: {
+  categories: Category[];
+  counts?: Record<number, number>;
+  activeId?: number;
+  q?: string;
+}) {
+  const searchParams = useSearchParams();
   const href = (categoryId?: number) => {
-    const params = new URLSearchParams();
+    const params = new URLSearchParams(searchParams);
+    params.delete("category");
     if (categoryId) params.set("category", String(categoryId));
     if (q) params.set("q", q);
     return params.size ? `/?${params}` : "/";
@@ -29,9 +42,10 @@ export function CategoryFilter({ categories, activeId, q }: { categories: Catego
     });
   }
 
-  const pill = "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition";
+  const pill = "inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition";
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    // One scrollable row on phones, wrapping on bigger screens.
+    <div className="-mx-4 flex items-center gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 sm:pb-0">
       <Link
         href={href()}
         className={`${pill} ${!activeId ? "border-stone-900 bg-stone-900 text-white" : "border-stone-200 bg-white text-stone-600 hover:border-stone-400"}`}
@@ -44,21 +58,24 @@ export function CategoryFilter({ categories, activeId, q }: { categories: Catego
           <Link
             key={c.id}
             href={href(active ? undefined : c.id)}
-            title={c.name}
+            title={`${c.name} (${counts[c.id] ?? 0})`}
             className={`group ${pill} ${active ? "border-transparent text-white" : "border-stone-200 bg-white text-stone-600 hover:border-stone-400"}`}
             style={active ? { backgroundColor: c.color } : undefined}
           >
             <span className="text-base leading-none">{c.emoji}</span>
             <span className={showNames || active ? "" : "hidden group-hover:inline"}>{c.name}</span>
+            {(showNames || active) && counts[c.id] != null && (
+              <span className={`text-xs ${active ? "text-white/80" : "text-stone-400"}`}>{counts[c.id]}</span>
+            )}
           </Link>
         );
       })}
       {categories.length > 0 && (
         <>
-          <button type="button" onClick={toggle} className="px-2 text-xs text-stone-500 hover:text-stone-800">
+          <button type="button" onClick={toggle} className="shrink-0 px-2 text-xs text-stone-500 hover:text-stone-800">
             {showNames ? "Hide names" : "Show names"}
           </button>
-          <Link href="/categories" className="px-1 text-xs text-stone-500 hover:text-stone-800">
+          <Link href="/categories" className="shrink-0 px-1 text-xs text-stone-500 hover:text-stone-800">
             Edit categories
           </Link>
         </>

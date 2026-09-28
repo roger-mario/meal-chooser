@@ -18,6 +18,8 @@ import { TIME_ZONE } from "@/lib/dates";
 import { getCurrentUser } from "@/lib/users";
 
 export const dynamic = "force-dynamic";
+// AI estimates can take a while.
+export const maxDuration = 60;
 
 export default async function MealPage({ params }: PageProps<"/meals/[id]">) {
   const { id } = await params;
@@ -94,7 +96,7 @@ export default async function MealPage({ params }: PageProps<"/meals/[id]">) {
         <NutritionForm mealId={meal.id} nutrition={meal.nutrition} />
       </section>
 
-      <section id="chat" className="card space-y-4 p-6">
+      <section id="chat" className="card space-y-4 p-4 sm:p-6">
         <h2 className="text-lg font-semibold">
           💬 Chat{messages.length > 0 && <span className="ml-1.5 text-sm font-normal text-stone-400">{messages.length}</span>}
         </h2>

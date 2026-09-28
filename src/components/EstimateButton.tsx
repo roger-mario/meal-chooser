@@ -14,11 +14,15 @@ export function EstimateButton({
 }) {
   const [state, formAction, pending] = useActionState(action, null);
   return (
-    <form action={formAction} className="flex items-center gap-3">
+    <form action={formAction} className="flex flex-col items-end gap-2">
       <button type="submit" className={hasEstimate ? "btn" : "btn-primary"} disabled={pending}>
         {pending ? "Estimating…" : hasEstimate ? "Re-estimate" : label}
       </button>
-      {state?.error && <span className="text-sm text-red-600">{state.error}</span>}
+      {state?.error && (
+        <p role="alert" className="max-w-md rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+          {state.error}
+        </p>
+      )}
     </form>
   );
 }

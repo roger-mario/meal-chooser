@@ -18,7 +18,7 @@ export function AddCategoryButton() {
     <>
       <button
         type="button"
-        className="btn"
+        className="btn hidden sm:inline-flex"
         onClick={() => {
           setFormKey((k) => k + 1);
           dialog.current?.showModal();

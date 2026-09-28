@@ -8,6 +8,7 @@ import { db, mealCategories, meals } from "@/db";
 import { aiAvailable, NUTRIENTS, type NutritionEstimate } from "@/lib/nutrients";
 import { COST_STORE, type CostEstimate, type CostItem } from "@/lib/cost";
 import { estimateCost } from "@/lib/cost-ai";
+import { aiErrorMessage } from "@/lib/ai-errors";
 import { deleteMealImage, ImageUploadError, uploadMealImage } from "@/lib/blob";
 import { DIETS, DIFFICULTIES, sanitizeIngredients, sanitizeLinks, type Ingredient, type MealLink } from "@/lib/meal-fields";
 import { estimateNutrition } from "@/lib/nutrition-ai";
@@ -156,7 +157,7 @@ export async function estimateMealNutrition(
       .where(eq(meals.id, id));
   } catch (e) {
     console.error("Nutrition estimate failed", e);
-    return { error: "The nutrition estimate failed. Please try again." };
+    return { error: aiErrorMessage(e) };
   }
   revalidatePath(`/meals/${id}`);
   return null;
@@ -195,7 +196,7 @@ export async function estimateMealCost(id: number, _prev: FormState): Promise<Fo
     await db().update(meals).set({ cost, costEstimatedAt: new Date() }).where(eq(meals.id, id));
   } catch (e) {
     console.error("Cost estimate failed", e);
-    return { error: "The price estimate failed. Please try again." };
+    return { error: aiErrorMessage(e) };
   }
   revalidatePath("/", "layout");
   return null;
