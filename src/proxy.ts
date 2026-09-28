@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-// Open to everyone: shared meals and their photos. The API checks its own key (API_KEY) instead.
-const PUBLIC_PREFIXES = ["/s/", "/api/images/", "/api/v1/"];
+// Open to everyone: shared meals, their photos and the ingredient pages Bring! imports. The API checks its own key (API_KEY) instead.
+const PUBLIC_PREFIXES = ["/s/", "/api/images/", "/api/v1/", "/api/bring/"];
 
 /** APP_PASSWORD (if set) protects the site with a browser password prompt. */
 export function proxy(request: NextRequest) {

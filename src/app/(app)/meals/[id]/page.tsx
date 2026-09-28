@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { deleteMeal, estimateMealCost, estimateMealNutrition } from "@/app/actions/meals";
+import { BringButton } from "@/components/BringButton";
 import { CostForm, CostPanel } from "@/components/CostPanel";
 import { EstimateButton } from "@/components/EstimateButton";
 import { MealView } from "@/components/MealView";
@@ -8,6 +9,7 @@ import { NutritionForm } from "@/components/NutritionForm";
 import { NutritionPanel } from "@/components/NutritionPanel";
 import { ShareButton } from "@/components/ShareButton";
 import { SubmitButton } from "@/components/SubmitButton";
+import { bringLines, bringToken } from "@/lib/bring";
 import { COST_STORE } from "@/lib/cost";
 import { aiAvailable } from "@/lib/nutrients";
 import { MealChat } from "@/components/MealChat";
@@ -34,6 +36,9 @@ export default async function MealPage({ params }: PageProps<"/meals/[id]">) {
               ✏️ Edit
             </Link>
             <ShareButton mealId={meal.id} token={meal.shareToken} />
+            {bringLines(meal.ingredients).length > 0 && (
+              <BringButton token={bringToken(meal.id)} servings={meal.servings} />
+            )}
             <form action={deleteMeal.bind(null, meal.id)} className="ml-auto">
               <SubmitButton className="btn-danger" pendingText="Deleting…">
                 Delete
