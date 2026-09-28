@@ -1,13 +1,17 @@
 "use server";
 
+import { randomBytes } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db, mealCategories, meals } from "@/db";
 import { aiAvailable, NUTRIENTS, type NutritionEstimate } from "@/lib/nutrients";
+import { COST_STORE, type CostEstimate, type CostItem } from "@/lib/cost";
+import { estimateCost } from "@/lib/cost-ai";
 import { deleteMealImage, ImageUploadError, uploadMealImage } from "@/lib/blob";
-import { DIETS, DIFFICULTIES, UNITS, type Ingredient } from "@/lib/meal-fields";
+import { DIETS, DIFFICULTIES, sanitizeIngredients, sanitizeLinks, type Ingredient, type MealLink } from "@/lib/meal-fields";
 import { estimateNutrition } from "@/lib/nutrition-ai";
+import { getCurrentUser } from "@/lib/users";
 
 export type FormState = { error?: string } | null;
 
@@ -36,17 +40,8 @@ function parseMealForm(formData: FormData) {
   const name = str("name");
   if (!name) throw new FormError("Please give the meal a name.");
 
-  const ingredients: Ingredient[] = json<Ingredient[]>("ingredients", [])
-    .filter((i) => i && typeof i.name === "string" && i.name.trim())
-    .map((i) => {
-      const quantity = Number(i.quantity);
-      return {
-        name: i.name.trim(),
-        quantity: Number.isFinite(quantity) && quantity > 0 ? quantity : undefined,
-        unit: UNITS.some((u) => u.value === i.unit) && i.unit ? i.unit : undefined,
-        staple: Boolean(i.staple),
-      };
-    });
+  const ingredients = sanitizeIngredients(json<Ingredient[]>("ingredients", []));
+  const links = sanitizeLinks(json<MealLink[]>("links", []));
   const steps = json<string[]>("steps", [])
     .map((s) => String(s).trim())
     .filter(Boolean);
@@ -59,8 +54,10 @@ function parseMealForm(formData: FormData) {
     cookMinutes: num("cookMinutes"),
     difficulty: oneOf("difficulty", DIFFICULTIES),
     diet: oneOf("diet", DIETS),
+    babyFriendly: formData.get("babyFriendly") === "on",
     ingredients,
     steps,
+    links,
     instructions: null,
     categoryIds: formData
       .getAll("categoryIds")
@@ -93,13 +90,14 @@ async function setCategories(mealId: number, categoryIds: number[]) {
 }
 
 export async function createMeal(_prev: FormState, formData: FormData): Promise<FormState> {
+  const user = await getCurrentUser();
   let id: number;
   try {
     const { categoryIds, ...data } = parseMealForm(formData);
     const imageUrl = await uploadImage(formData);
     const [meal] = await db()
       .insert(meals)
-      .values({ ...data, imageUrl })
+      .values({ ...data, imageUrl, authorId: user?.id ?? null })
       .returning({ id: meals.id });
     await setCategories(meal.id, categoryIds);
     id = meal.id;
@@ -185,4 +183,51 @@ export async function saveManualNutrition(id: number, formData: FormData) {
     .set({ nutrition, nutritionEstimatedAt: nutrition ? new Date() : null })
     .where(eq(meals.id, id));
   revalidatePath("/", "layout");
+}
+
+export async function estimateMealCost(id: number, _prev: FormState): Promise<FormState> {
+  const [meal] = await db().select().from(meals).where(eq(meals.id, id));
+  if (!meal) return { error: "Meal not found" };
+  if (!aiAvailable()) return { error: "AI estimates are not set up. Enter the prices manually below." };
+  if (meal.ingredients.length === 0) return { error: "Add ingredients to the meal first." };
+  try {
+    const cost = await estimateCost(meal);
+    await db().update(meals).set({ cost, costEstimatedAt: new Date() }).where(eq(meals.id, id));
+  } catch (e) {
+    console.error("Cost estimate failed", e);
+    return { error: "The price estimate failed. Please try again." };
+  }
+  revalidatePath("/", "layout");
+  return null;
+}
+
+export async function saveManualCost(id: number, formData: FormData) {
+  const items: CostItem[] = [];
+  for (const name of formData.getAll("itemName")) {
+    const idx = items.length;
+    const raw = String(formData.getAll("itemChf")[idx] ?? "").trim().replace(",", ".");
+    const chf = Number(raw);
+    items.push({ name: String(name), chf: raw !== "" && Number.isFinite(chf) && chf >= 0 ? chf : NaN });
+  }
+  const priced = items.filter((i) => Number.isFinite(i.chf));
+  const notes = String(formData.get("notes") ?? "").trim();
+  const cost: CostEstimate | null = priced.length
+    ? { store: COST_STORE, items: priced, source: "manual", notes: notes || undefined }
+    : null;
+  await db()
+    .update(meals)
+    .set({ cost, costEstimatedAt: cost ? new Date() : null })
+    .where(eq(meals.id, id));
+  revalidatePath("/", "layout");
+}
+
+export async function startSharing(id: number) {
+  const token = randomBytes(12).toString("base64url");
+  await db().update(meals).set({ shareToken: token }).where(eq(meals.id, id));
+  revalidatePath(`/meals/${id}`);
+}
+
+export async function stopSharing(id: number) {
+  await db().update(meals).set({ shareToken: null }).where(eq(meals.id, id));
+  revalidatePath(`/meals/${id}`);
 }

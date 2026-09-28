@@ -21,6 +21,7 @@ month, and see an AI estimate of calories, macros and micronutrients (vitamins, 
    - `APP_PASSWORD` (optional) to protect the site; the browser asks for it, any username works
    - `AI_MODEL` and `AI_GATEWAY_API_KEY` (optional) to turn on AI nutrition estimates. Without them,
      nutrition values are entered manually on each meal.
+   - `API_KEY` (optional) to turn on the `/api/v1` endpoints for adding meals
 4. Redeploy so the new variables take effect.
 The `vercel-build` script runs database migrations on every deploy. It finds the connection string in `DATABASE_URL`, `POSTGRES_URL`, or a prefixed variant such as `MEAL_DB_DATABASE_URL`.
 

@@ -12,6 +12,7 @@ import {
   type Diet,
   type Difficulty,
   type Ingredient,
+  type MealLink,
 } from "@/lib/meal-fields";
 import { ImageInput } from "./ImageInput";
 import { SubmitButton } from "./SubmitButton";
@@ -25,8 +26,10 @@ export type MealFormValues = {
   cookMinutes: number | null;
   difficulty: Difficulty | null;
   diet: Diet | null;
+  babyFriendly: boolean;
   ingredients: Ingredient[];
   steps: string[];
+  links: MealLink[];
   categoryIds: number[];
 };
 
@@ -94,6 +97,7 @@ export function MealForm({
   const [cook, setCook] = useState(initial?.cookMinutes?.toString() ?? "");
   const [servings, setServings] = useState(initial?.servings ?? 2);
   const [difficulty, setDifficulty] = useState<Difficulty | null>(initial?.difficulty ?? null);
+  const [babyFriendly, setBabyFriendly] = useState(initial?.babyFriendly ?? false);
   const [diet, setDiet] = useState<Diet | null>(initial?.diet ?? null);
   const [rows, setRows] = useState<Row[]>(() =>
     initial?.ingredients.length
@@ -101,6 +105,7 @@ export function MealForm({
       : [emptyRow(), emptyRow(), emptyRow()],
   );
   const [steps, setSteps] = useState<string[]>(initial?.steps.length ? initial.steps : ["", ""]);
+  const [links, setLinks] = useState<MealLink[]>(initial?.links.length ? initial.links : [{ url: "" }]);
   const [selectedCats, setSelectedCats] = useState(new Set(initial?.categoryIds));
 
   const total = (Number(prep) || 0) + (Number(cook) || 0);
@@ -127,6 +132,7 @@ export function MealForm({
     <form action={formAction} className="space-y-5">
       <input type="hidden" name="ingredients" value={ingredientsJson} />
       <input type="hidden" name="steps" value={JSON.stringify(steps.filter((s) => s.trim()))} />
+      <input type="hidden" name="links" value={JSON.stringify(links.filter((l) => l.url.trim()))} />
 
       <Section title="The basics">
         <div className="grid gap-5 md:grid-cols-2">
@@ -188,6 +194,23 @@ export function MealForm({
           <div>
             <span className="label">Diet <span className="font-normal text-stone-400">(optional)</span></span>
             <Segmented name="diet" options={DIETS} value={diet} onChange={setDiet} noneLabel="Any" />
+          </div>
+          <div>
+            <span className="label">Good for babies?</span>
+            <label
+              className={`inline-flex cursor-pointer select-none items-center gap-2 rounded-xl px-3 py-2 text-sm transition ${
+                babyFriendly ? "bg-sky-100 font-medium text-sky-900" : "bg-stone-100 text-stone-500 hover:text-stone-800"
+              }`}
+            >
+              <input
+                type="checkbox"
+                name="babyFriendly"
+                checked={babyFriendly}
+                onChange={(e) => setBabyFriendly(e.target.checked)}
+                className="sr-only"
+              />
+              👶 {babyFriendly ? "Baby-friendly" : "Not marked"}
+            </label>
           </div>
         </div>
         {categories.length > 0 && (
@@ -325,6 +348,42 @@ export function MealForm({
         </ol>
         <button type="button" onClick={() => setSteps((st) => [...st, ""])} className="btn">
           + Add step
+        </button>
+      </Section>
+
+      <Section title="Sources" hint="Optional: links to the original recipe, a video, a blog post …">
+        <div className="space-y-2">
+          {links.map((l, idx) => (
+            <div key={idx} className="flex flex-wrap items-center gap-2 sm:flex-nowrap">
+              <input
+                value={l.url}
+                onChange={(e) => setLinks((ls) => ls.map((x, i) => (i === idx ? { ...x, url: e.target.value } : x)))}
+                type="url"
+                inputMode="url"
+                placeholder="https://www.youtube.com/watch?v=…"
+                aria-label="Link"
+                className="input min-w-0 flex-[2]"
+              />
+              <input
+                value={l.label ?? ""}
+                onChange={(e) => setLinks((ls) => ls.map((x, i) => (i === idx ? { ...x, label: e.target.value } : x)))}
+                placeholder="Name (optional)"
+                aria-label="Link name"
+                className="input min-w-0 flex-1"
+              />
+              <button
+                type="button"
+                onClick={() => setLinks((ls) => (ls.length > 1 ? ls.filter((_, i) => i !== idx) : [{ url: "" }]))}
+                aria-label="Remove link"
+                className="px-1 text-stone-400 hover:text-red-600"
+              >
+                ✕
+              </button>
+            </div>
+          ))}
+        </div>
+        <button type="button" onClick={() => setLinks((ls) => [...ls, { url: "" }])} className="btn">
+          + Add link
         </button>
       </Section>
 

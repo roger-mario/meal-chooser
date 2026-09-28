@@ -26,6 +26,42 @@ export type Ingredient = {
   staple?: boolean;
 };
 
+export type MealLink = { url: string; label?: string };
+
+/** Accepts only http(s) URLs; adds https:// when the scheme is missing. */
+export function cleanUrl(raw: string): string | null {
+  const value = raw.trim();
+  if (!value) return null;
+  try {
+    const url = new URL(/^[a-z]+:\/\//i.test(value) ? value : `https://${value}`);
+    return url.protocol === "http:" || url.protocol === "https:" ? url.toString() : null;
+  } catch {
+    return null;
+  }
+}
+
+export function linkIcon(url: string) {
+  const host = (() => {
+    try {
+      return new URL(url).hostname.replace(/^www\./, "");
+    } catch {
+      return "";
+    }
+  })();
+  if (/youtube\.com|youtu\.be|vimeo\.com|tiktok\.com/.test(host)) return "▶️";
+  if (/instagram\.com|pinterest\./.test(host)) return "📸";
+  return "🔗";
+}
+
+export function linkLabel(link: MealLink) {
+  if (link.label) return link.label;
+  try {
+    return new URL(link.url).hostname.replace(/^www\./, "");
+  } catch {
+    return link.url;
+  }
+}
+
 export const DIFFICULTIES = [
   { value: "easy", label: "Easy" },
   { value: "medium", label: "Medium" },
@@ -114,4 +150,34 @@ export function ingredientsMatch(have: string, need: string) {
   if (a === b) return true;
   const words = (s: string) => s.split(" ");
   return words(b).includes(a) || words(a).includes(b);
+}
+
+/** Cleans ingredient rows from forms, the API or backups. */
+export function sanitizeIngredients(items: unknown): Ingredient[] {
+  if (!Array.isArray(items)) return [];
+  return items.flatMap((raw) => {
+    const i = (typeof raw === "string" ? normalizeIngredients([raw])[0] : raw) as Partial<Ingredient> | null;
+    const name = typeof i?.name === "string" ? i.name.trim() : "";
+    if (!name) return [];
+    const quantity = Number(i?.quantity);
+    return [
+      {
+        name,
+        quantity: Number.isFinite(quantity) && quantity > 0 ? quantity : undefined,
+        unit: UNITS.some((u) => u.value && u.value === i?.unit) ? i?.unit : undefined,
+        staple: typeof i?.staple === "boolean" ? i.staple : looksLikeStaple(name),
+      },
+    ];
+  });
+}
+
+export function sanitizeLinks(items: unknown): MealLink[] {
+  if (!Array.isArray(items)) return [];
+  return items.flatMap((raw) => {
+    const l = (typeof raw === "string" ? { url: raw } : raw) as Partial<MealLink> | null;
+    const url = cleanUrl(String(l?.url ?? ""));
+    if (!url) return [];
+    const label = typeof l?.label === "string" && l.label.trim() ? l.label.trim() : undefined;
+    return [{ url, label }];
+  });
 }

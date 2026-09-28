@@ -1,31 +1,40 @@
 import Link from "next/link";
+import { AuthorLine } from "@/components/AuthorLine";
 import { CategoryChip } from "@/components/CategoryChip";
 import { CategoryFilter } from "@/components/CategoryFilter";
 import { MealImage } from "@/components/MealImage";
 import { MealMeta } from "@/components/MealMeta";
+import { SearchBox } from "@/components/SearchBox";
+import { costPerServing, formatChf } from "@/lib/cost";
 import { listCategories, listMeals } from "@/lib/queries";
 
 export const dynamic = "force-dynamic";
 
 export default async function MealsPage({ searchParams }: PageProps<"/">) {
-  const { category } = await searchParams;
+  const { category, q } = await searchParams;
   const categoryId = category ? Number(category) : undefined;
-  const [meals, categories] = await Promise.all([listMeals(categoryId), listCategories()]);
+  const query = typeof q === "string" ? q.trim() : "";
+  const [meals, categories] = await Promise.all([listMeals({ categoryId, q: query }), listCategories()]);
 
   return (
     <div className="space-y-6">
       <div className="space-y-3">
         <h1 className="text-2xl font-semibold tracking-tight">Your meals</h1>
-        <CategoryFilter categories={categories} activeId={categoryId} />
+        <SearchBox />
+        <CategoryFilter categories={categories} activeId={categoryId} q={query} />
       </div>
 
       {meals.length === 0 ? (
         <div className="card flex flex-col items-center gap-3 p-12 text-center">
           <span className="text-5xl">🍲</span>
-          <p className="text-stone-600">{categoryId ? "No meals in this category yet." : "No meals yet."}</p>
-          <Link href="/meals/new" className="btn-primary">
-            Add your first favourite meal
-          </Link>
+          <p className="text-stone-600">
+            {query ? `Nothing found for "${query}".` : categoryId ? "No meals in this category yet." : "No meals yet."}
+          </p>
+          {!query && (
+            <Link href="/meals/new" className="btn-primary">
+              Add your first favourite meal
+            </Link>
+          )}
         </div>
       ) : (
         <ul className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
@@ -43,6 +52,12 @@ export default async function MealsPage({ searchParams }: PageProps<"/">) {
                     )}
                   </div>
                   <MealMeta meal={m} />
+                  {costPerServing(m.cost, m.servings) != null && (
+                    <p className="text-sm font-medium text-amber-800">
+                      💰 {formatChf(costPerServing(m.cost, m.servings)!)} <span className="font-normal text-stone-500">per portion</span>
+                    </p>
+                  )}
+                  <AuthorLine author={m.author} createdAt={m.createdAt} updatedAt={m.updatedAt} compact />
                   {m.categories.length > 0 && (
                     <div className="flex flex-wrap gap-1">
                       {m.categories.map((c) => (

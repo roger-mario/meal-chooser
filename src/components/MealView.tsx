@@ -1,29 +1,16 @@
-import Link from "next/link";
-import { notFound } from "next/navigation";
-import { deleteMeal } from "@/app/actions/meals";
-import { CategoryChip } from "@/components/CategoryChip";
-import { EstimateButton } from "@/components/EstimateButton";
-import { MealImage } from "@/components/MealImage";
-import { MealMeta } from "@/components/MealMeta";
-import { NutritionForm } from "@/components/NutritionForm";
-import { NutritionPanel } from "@/components/NutritionPanel";
-import { SubmitButton } from "@/components/SubmitButton";
-import { formatQuantity } from "@/lib/meal-fields";
-import { aiAvailable } from "@/lib/nutrients";
-import { getMeal } from "@/lib/queries";
+import { AuthorLine } from "./AuthorLine";
+import { CategoryChip } from "./CategoryChip";
+import { MealImage } from "./MealImage";
+import { MealMeta } from "./MealMeta";
+import { formatQuantity, linkIcon, linkLabel } from "@/lib/meal-fields";
+import type { MealWithCategories } from "@/lib/queries";
 
-export const dynamic = "force-dynamic";
-
-export default async function MealPage({ params }: PageProps<"/meals/[id]">) {
-  const { id } = await params;
-  const meal = await getMeal(Number(id));
-  if (!meal) notFound();
-  const ai = aiAvailable();
+/** Photo, details, shopping list and steps; shared by the meal page and the public share page. */
+export function MealView({ meal, actions }: { meal: MealWithCategories; actions?: React.ReactNode }) {
   const mainIngredients = meal.ingredients.filter((i) => !i.staple);
   const basics = meal.ingredients.filter((i) => i.staple);
-
   return (
-    <div className="space-y-6">
+    <>
       <div className="card overflow-hidden md:grid md:grid-cols-2">
         <MealImage src={meal.imageUrl} alt={meal.name} />
         <div className="flex flex-col gap-3 p-6">
@@ -35,16 +22,8 @@ export default async function MealPage({ params }: PageProps<"/meals/[id]">) {
           <h1 className="text-3xl font-semibold tracking-tight">{meal.name}</h1>
           {meal.description && <p className="text-stone-600">{meal.description}</p>}
           <MealMeta meal={meal} detailed />
-          <div className="mt-auto flex gap-2 pt-4">
-            <Link href={`/meals/${meal.id}/edit`} className="btn">
-              ✏️ Edit
-            </Link>
-            <form action={deleteMeal.bind(null, meal.id)}>
-              <SubmitButton className="btn-danger" pendingText="Deleting…">
-                Delete
-              </SubmitButton>
-            </form>
-          </div>
+          <AuthorLine author={meal.author} createdAt={meal.createdAt} updatedAt={meal.updatedAt} />
+          {actions && <div className="mt-auto flex flex-wrap gap-2 pt-4">{actions}</div>}
         </div>
       </div>
 
@@ -92,25 +71,28 @@ export default async function MealPage({ params }: PageProps<"/meals/[id]">) {
               ))}
             </ol>
           )}
+          {meal.links.length > 0 && (
+            <div className="mt-6 border-t border-stone-100 pt-4">
+              <h3 className="mb-2 text-sm font-semibold text-stone-700">Sources</h3>
+              <ul className="space-y-1.5">
+                {meal.links.map((l, i) => (
+                  <li key={i}>
+                    <a
+                      href={l.url}
+                      target="_blank"
+                      rel="noopener noreferrer nofollow"
+                      className="inline-flex items-center gap-2 text-sm text-emerald-800 hover:underline"
+                    >
+                      <span>{linkIcon(l.url)}</span>
+                      {linkLabel(l)}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </section>
       </div>
-
-      <section className="card space-y-4 p-6">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-lg font-semibold">🥗 Nutrition per serving</h2>
-          {ai && <EstimateButton mealId={meal.id} hasEstimate={!!meal.nutrition} />}
-        </div>
-        {meal.nutrition ? (
-          <NutritionPanel nutrition={meal.nutrition} />
-        ) : (
-          <p className="text-sm text-stone-500">
-            {ai
-              ? "No values yet. Let the AI estimate calories, macros, vitamins and minerals, or enter them yourself."
-              : "No values yet. Enter them below, for example from a package label or a nutrition app."}
-          </p>
-        )}
-        <NutritionForm mealId={meal.id} nutrition={meal.nutrition} />
-      </section>
-    </div>
+    </>
   );
 }

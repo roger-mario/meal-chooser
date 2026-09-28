@@ -24,8 +24,10 @@ export default async function EditMealPage({ params }: PageProps<"/meals/[id]/ed
           cookMinutes: meal.cookMinutes,
           difficulty: meal.difficulty,
           diet: meal.diet,
+          babyFriendly: meal.babyFriendly,
           ingredients: meal.ingredients,
           steps: meal.steps,
+          links: meal.links,
           categoryIds: meal.categories.map((c) => c.id),
         }}
       />

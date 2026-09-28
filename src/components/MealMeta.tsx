@@ -6,7 +6,14 @@ export function MealMeta({
   meal,
   detailed = false,
 }: {
-  meal: { prepMinutes: number | null; cookMinutes: number | null; difficulty: Difficulty | null; diet: Diet | null; servings: number };
+  meal: {
+    prepMinutes: number | null;
+    cookMinutes: number | null;
+    difficulty: Difficulty | null;
+    diet: Diet | null;
+    babyFriendly: boolean;
+    servings: number;
+  };
   detailed?: boolean;
 }) {
   const total = totalMinutes(meal);
@@ -24,6 +31,9 @@ export function MealMeta({
       {items.map((i) => (
         <span key={i}>{i}</span>
       ))}
+      {meal.babyFriendly && (
+        <span className="rounded-full bg-sky-100 px-2 py-0.5 text-xs font-medium text-sky-800">👶 Baby-friendly</span>
+      )}
       {diet && (
         <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">
           {diet.emoji} {diet.label}

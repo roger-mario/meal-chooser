@@ -15,6 +15,27 @@
       "when": 1790586450753,
       "tag": "0001_meal_details",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1790595442655,
+      "tag": "0002_meal_cost",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1790595879592,
+      "tag": "0003_meal_share_links",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1790598239766,
+      "tag": "0004_users_comments",
+      "breakpoints": true
     }
   ]
 }

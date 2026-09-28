@@ -6,7 +6,13 @@ import type { Category } from "@/db/schema";
 
 const STORAGE_KEY = "meal-chooser:show-category-names";
 
-export function CategoryFilter({ categories, activeId }: { categories: Category[]; activeId?: number }) {
+export function CategoryFilter({ categories, activeId, q }: { categories: Category[]; activeId?: number; q?: string }) {
+  const href = (categoryId?: number) => {
+    const params = new URLSearchParams();
+    if (categoryId) params.set("category", String(categoryId));
+    if (q) params.set("q", q);
+    return params.size ? `/?${params}` : "/";
+  };
   const [showNames, setShowNames] = useState(false);
   useEffect(() => {
     try {
@@ -27,7 +33,7 @@ export function CategoryFilter({ categories, activeId }: { categories: Category[
   return (
     <div className="flex flex-wrap items-center gap-2">
       <Link
-        href="/"
+        href={href()}
         className={`${pill} ${!activeId ? "border-stone-900 bg-stone-900 text-white" : "border-stone-200 bg-white text-stone-600 hover:border-stone-400"}`}
       >
         All
@@ -37,7 +43,7 @@ export function CategoryFilter({ categories, activeId }: { categories: Category[
         return (
           <Link
             key={c.id}
-            href={active ? "/" : `/?category=${c.id}`}
+            href={href(active ? undefined : c.id)}
             title={c.name}
             className={`group ${pill} ${active ? "border-transparent text-white" : "border-stone-200 bg-white text-stone-600 hover:border-stone-400"}`}
             style={active ? { backgroundColor: c.color } : undefined}

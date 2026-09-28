@@ -1,14 +1,22 @@
 "use client";
 
 import { useActionState } from "react";
-import { estimateMealNutrition } from "@/app/actions/meals";
+import type { FormState } from "@/app/actions/meals";
 
-export function EstimateButton({ mealId, hasEstimate }: { mealId: number; hasEstimate: boolean }) {
-  const [state, action, pending] = useActionState(estimateMealNutrition.bind(null, mealId), null);
+export function EstimateButton({
+  action,
+  hasEstimate,
+  label,
+}: {
+  action: (state: FormState) => Promise<FormState>;
+  hasEstimate: boolean;
+  label: string;
+}) {
+  const [state, formAction, pending] = useActionState(action, null);
   return (
-    <form action={action} className="flex items-center gap-3">
+    <form action={formAction} className="flex items-center gap-3">
       <button type="submit" className={hasEstimate ? "btn" : "btn-primary"} disabled={pending}>
-        {pending ? "Estimating…" : hasEstimate ? "Re-estimate" : "Estimate nutrition with AI"}
+        {pending ? "Estimating…" : hasEstimate ? "Re-estimate" : label}
       </button>
       {state?.error && <span className="text-sm text-red-600">{state.error}</span>}
     </form>
