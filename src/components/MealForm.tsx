@@ -33,8 +33,12 @@ export type MealFormValues = {
   categoryIds: number[];
 };
 
-type Row = Ingredient & { key: number; touchedStaple?: boolean };
+type Row = Ingredient & { key: number; touchedStaple?: boolean; showKind?: boolean; showRange?: boolean };
 let nextKey = 1;
+const CHIP =
+  "inline-flex h-8 items-center rounded-full border border-dashed border-stone-300 px-3 text-sm text-stone-500 transition hover:border-stone-400 hover:text-stone-800";
+const CHIP_INPUT =
+  "h-8 rounded-full border border-stone-300 bg-white px-3 text-base text-stone-900 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/20 focus:outline-none sm:text-sm";
 const emptyRow = (): Row => ({ key: nextKey++, name: "", unit: "g" });
 
 function Section({ title, hint, children }: { title: string; hint?: string; children: React.ReactNode }) {
@@ -101,7 +105,7 @@ export function MealForm({
   const [diet, setDiet] = useState<Diet | null>(initial?.diet ?? null);
   const [rows, setRows] = useState<Row[]>(() =>
     initial?.ingredients.length
-      ? initial.ingredients.map((i) => ({ ...i, key: nextKey++, touchedStaple: true }))
+      ? initial.ingredients.map((i) => ({ ...i, key: nextKey++, touchedStaple: true, showKind: !!i.variant, showRange: !!i.quantityMax }))
       : [emptyRow(), emptyRow(), emptyRow()],
   );
   const [steps, setSteps] = useState<string[]>(initial?.steps.length ? initial.steps : ["", ""]);
@@ -254,15 +258,12 @@ export function MealForm({
 
       <Section
         title="Shopping list"
-        hint="Kind and max are optional: chicken · breast, rice · jasmine, 600 – 700 g. Mark basics like salt, pepper or oil with 🧂; they are skipped when matching meals to what you have at home."
+        hint="Add a kind (chicken → breast) or a range (600–700 g) if you like. 🧂 marks basics like salt or oil."
       >
-        <div className="space-y-2">
+        <ul className="-mt-1 divide-y divide-stone-100">
           {rows.map((r, idx) => (
-            <div
-              key={r.key}
-              className="space-y-2 rounded-xl bg-stone-50 p-2 sm:flex sm:items-center sm:gap-2 sm:space-y-0 sm:bg-transparent sm:p-0"
-            >
-              <div className="grid grid-cols-[minmax(0,3fr)_minmax(0,2fr)_auto_auto] items-center gap-2 sm:contents">
+            <li key={r.key} className="space-y-2 py-3 sm:flex sm:items-center sm:gap-2 sm:space-y-0 sm:py-2">
+              <div className="flex items-center gap-2 sm:flex-1">
                 <input
                   value={r.name}
                   onChange={(e) => updateRow(r.key, { name: e.target.value })}
@@ -274,35 +275,8 @@ export function MealForm({
                   }}
                   placeholder={["Potatoes", "Onions", "Beef mince"][idx] ?? "Ingredient"}
                   aria-label="Ingredient"
-                  className="input min-w-0 sm:flex-[3]"
+                  className="input min-w-0 flex-1"
                 />
-                <input
-                  value={r.variant ?? ""}
-                  onChange={(e) => updateRow(r.key, { variant: e.target.value || undefined })}
-                  placeholder={["e.g. waxy", "e.g. red", "e.g. lean"][idx] ?? "Kind (optional)"}
-                  aria-label="Kind or variety (optional)"
-                  title="Optional kind, cut or variety, e.g. breast or jasmine"
-                  className="input min-w-0 sm:flex-[2]"
-                />
-                <button
-                  type="button"
-                  title={r.staple ? "Basic ingredient (salt, oil …)" : "Mark as basic ingredient"}
-                  aria-pressed={!!r.staple}
-                  onClick={() => updateRow(r.key, { staple: !r.staple, touchedStaple: true })}
-                  className={`h-10 w-10 shrink-0 rounded-lg sm:order-1 text-lg transition ${r.staple ? "bg-amber-100" : "opacity-30 grayscale hover:opacity-70"}`}
-                >
-                  🧂
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setRows((rs) => (rs.length > 1 ? rs.filter((x) => x.key !== r.key) : [emptyRow()]))}
-                  aria-label="Remove ingredient"
-                  className="h-10 w-8 shrink-0 text-stone-400 sm:order-1 hover:text-red-600"
-                >
-                  ✕
-                </button>
-              </div>
-              <div className="flex items-center gap-2 sm:contents">
                 <input
                   type="number"
                   min={0}
@@ -311,29 +285,14 @@ export function MealForm({
                   value={r.quantity ?? ""}
                   onChange={(e) => updateRow(r.key, { quantity: e.target.value === "" ? undefined : Number(e.target.value) })}
                   placeholder="Qty"
-                  aria-label="Quantity"
-                  className="input min-w-0 flex-1 sm:w-20 sm:flex-none"
-                />
-                <span className="text-stone-400" aria-hidden>
-                  –
-                </span>
-                <input
-                  type="number"
-                  min={0}
-                  step="any"
-                  inputMode="decimal"
-                  value={r.quantityMax ?? ""}
-                  onChange={(e) => updateRow(r.key, { quantityMax: e.target.value === "" ? undefined : Number(e.target.value) })}
-                  placeholder="Max"
-                  aria-label="Maximum quantity (optional)"
-                  title="Optional: give a range like 600 – 700 g"
-                  className="input min-w-0 flex-1 sm:w-20 sm:flex-none"
+                  aria-label={r.showRange ? "Minimum quantity" : "Quantity"}
+                  className="input w-[4.5rem] shrink-0 px-2 text-center"
                 />
                 <select
                   value={r.unit ?? ""}
                   onChange={(e) => updateRow(r.key, { unit: e.target.value || undefined })}
                   aria-label="Unit"
-                  className="input w-24 shrink-0"
+                  className="input w-[4.75rem] shrink-0 px-2"
                 >
                   {UNITS.map((u) => (
                     <option key={u.value} value={u.value}>
@@ -342,9 +301,71 @@ export function MealForm({
                   ))}
                 </select>
               </div>
-            </div>
+              <div className="flex items-center gap-1.5 sm:w-[23rem] sm:shrink-0">
+                {r.showKind ? (
+                  <input
+                    autoFocus={!r.variant}
+                    value={r.variant ?? ""}
+                    onChange={(e) => updateRow(r.key, { variant: e.target.value || undefined })}
+                    onBlur={() => !r.variant?.trim() && updateRow(r.key, { variant: undefined, showKind: false })}
+                    placeholder="Kind, e.g. breast"
+                    aria-label="Kind or variety"
+                    className={`${CHIP_INPUT} min-w-0 flex-1 sm:w-32 sm:flex-none`}
+                  />
+                ) : (
+                  <button type="button" onClick={() => updateRow(r.key, { showKind: true })} className={`${CHIP} shrink-0`}>
+                    + Kind
+                  </button>
+                )}
+                {r.showRange ? (
+                  <span className="inline-flex shrink-0 items-center gap-1 text-sm text-stone-400">
+                    –
+                    <input
+                      autoFocus={!r.quantityMax}
+                      type="number"
+                      min={0}
+                      step="any"
+                      inputMode="decimal"
+                      value={r.quantityMax ?? ""}
+                      onChange={(e) =>
+                        updateRow(r.key, { quantityMax: e.target.value === "" ? undefined : Number(e.target.value) })
+                      }
+                      onBlur={() => !r.quantityMax && updateRow(r.key, { quantityMax: undefined, showRange: false })}
+                      placeholder="Max"
+                      aria-label="Maximum quantity"
+                      className={`${CHIP_INPUT} w-16 px-2 text-center [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none`}
+                    />
+                  </span>
+                ) : (
+                  <button type="button" onClick={() => updateRow(r.key, { showRange: true })} className={`${CHIP} shrink-0`}>
+                    + Range
+                  </button>
+                )}
+                <button
+                  type="button"
+                  aria-pressed={!!r.staple}
+                  title="Basics like salt or oil are skipped when matching meals to what you have at home"
+                  onClick={() => updateRow(r.key, { staple: !r.staple, touchedStaple: true })}
+                  className={`${
+                    r.staple
+                      ? "inline-flex h-8 items-center gap-1 rounded-full bg-amber-100 px-3 text-sm font-medium text-amber-900"
+                      : CHIP
+                  } shrink-0`}
+                >
+                  🧂 Basic
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRows((rs) => (rs.length > 1 ? rs.filter((x) => x.key !== r.key) : [emptyRow()]))}
+                  aria-label="Remove ingredient"
+                  className="ml-auto flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-stone-400 hover:bg-red-50 hover:text-red-600"
+                >
+                  ✕
+                </button>
+              </div>
+            </li>
           ))}
-        </div>
+        </ul>
         <button type="button" onClick={() => setRows((rs) => [...rs, emptyRow()])} className="btn">
           + Add ingredient
         </button>
