@@ -8,7 +8,13 @@ import { listMeals } from "@/lib/queries";
 export async function GET(request: Request) {
   const denied = checkApiKey(request);
   if (denied) return denied;
-  const meals = await listMeals();
+  // Optional filters: ?q=chicken, ?ingredient=rice&variant=jasmine
+  const params = new URL(request.url).searchParams;
+  const meals = await listMeals({
+    q: params.get("q") ?? undefined,
+    ingredient: params.get("ingredient") ?? undefined,
+    variant: params.get("variant") ?? undefined,
+  });
   const origin = new URL(request.url).origin;
   return Response.json({
     meals: meals.map((m) => ({

@@ -32,6 +32,7 @@ export default async function MealPage({ params }: PageProps<"/meals/[id]">) {
   return (
     <div className="space-y-4 sm:space-y-6">
       <MealView
+        ingredientLinks
         meal={meal}
         actions={
           <>

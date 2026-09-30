@@ -29,7 +29,8 @@ export async function estimateCost(meal: Meal): Promise<CostEstimate> {
     `Use typical current ${COST_STORE} shelf prices for standard (not premium or organic) products.`,
     "Price only the amount the recipe uses, pro-rated from the pack price.",
     "For basics like salt, pepper or oil, price the small amount used.",
-    "Where no quantity is given, assume a typical amount for this recipe.",
+    "Where no quantity is given, assume a typical amount for this recipe. For a range like 600–700 g, use the midpoint.",
+    "Text in brackets after a name is the kind or cut (chicken (breast)): price that kind, but return the name without it.",
     "Return one item per ingredient, in the same order.",
   ].join("\n");
 

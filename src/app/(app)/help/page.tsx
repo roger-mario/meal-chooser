@@ -34,7 +34,7 @@ const EXAMPLE = `{
   "categories": ["Weekly meal"],
   "ingredients": [
     { "name": "Potatoes", "quantity": 800, "unit": "g" },
-    { "name": "Beef mince", "quantity": 500, "unit": "g" },
+    { "name": "Beef mince", "variant": "lean", "quantity": 500, "quantityMax": 600, "unit": "g" },
     { "name": "Onions", "quantity": 2, "unit": "pcs" },
     { "name": "Salt", "unit": "to taste", "staple": true }
   ],
@@ -77,6 +77,12 @@ export default async function HelpPage() {
           Type in the search box on the main page, e.g. <b>chicken</b>. It looks in meal names, descriptions,
           ingredients, steps, categories and the author&apos;s name. Several words narrow it down (&quot;chicken
           rice&quot; finds meals with both). You can combine it with a category.
+        </p>
+        <p>
+          Ingredients can have a <b>kind</b> (chicken · breast, rice · jasmine) and an amount range (600 – 700 g).
+          After searching one word like <b>rice</b>, tap <b>Only meals with &quot;rice&quot; as an ingredient</b> to skip
+          meals that only mention it in the steps. On a meal page, tap a kind (e.g. <b>jasmine</b>) to see every meal
+          with jasmine rice.
         </p>
       </Section>
 
@@ -149,7 +155,9 @@ export default async function HelpPage() {
         <p className="text-stone-500">
           Units: g, kg, ml, l, pcs, tsp, tbsp, cup, clove, slice, can, bunch, pinch, &quot;to taste&quot;. Difficulty:
           easy, medium, hard. Diet: vegetarian, vegan. Also available:{" "}
-          <code>GET /api/v1/meals</code> and <code>GET /api/v1/categories</code>.
+          <code>GET /api/v1/meals</code> (optionally <code>?q=chicken</code> or{" "}
+          <code>?ingredient=rice&amp;variant=jasmine</code>) and <code>GET /api/v1/categories</code>. An ingredient&apos;s{" "}
+          <code>variant</code> is its kind (breast, jasmine) and <code>quantityMax</code> the top of a range.
         </p>
       </Section>
 

@@ -22,20 +22,36 @@ function greeting() {
 }
 
 export default async function MealsPage({ searchParams }: PageProps<"/">) {
-  const { category, q, sort: sortParam } = await searchParams;
+  const { category, q, ingredient: ingredientParam, variant: variantParam, sort: sortParam } = await searchParams;
   const categoryId = category ? Number(category) : undefined;
   const query = typeof q === "string" ? q.trim() : "";
+  const ingredient = typeof ingredientParam === "string" ? ingredientParam.trim().slice(0, 80) : "";
+  const variant = ingredient && typeof variantParam === "string" ? variantParam.trim().slice(0, 80) : "";
   const sort = parseSort(sortParam);
   const today = todayISO();
   const [found, categories, counts, chats, me] = await Promise.all([
-    listMeals({ categoryId, q: query }),
+    listMeals({ categoryId, q: query, ingredient, variant }),
     listCategories(),
     categoryCounts(),
     commentCounts(),
     getCurrentUser(),
   ]);
   const meals = sortMeals(found, sort);
-  const filtering = Boolean(query || categoryId);
+  const filtering = Boolean(query || categoryId || ingredient);
+  // Keeps the other filters when removing the ingredient (or only its kind).
+  const withoutIngredient = (keepIngredient: boolean) => {
+    const p = new URLSearchParams();
+    if (categoryId) p.set("category", String(categoryId));
+    if (query) p.set("q", query);
+    if (typeof sortParam === "string") p.set("sort", sortParam);
+    if (keepIngredient) p.set("ingredient", ingredient);
+    return p.size ? `/?${p}` : "/";
+  };
+  // A one-word search can be narrowed to meals that use it as an ingredient.
+  const asIngredientHref =
+    query && !ingredient && !/\s/.test(query)
+      ? `/?${new URLSearchParams({ ...(categoryId ? { category: String(categoryId) } : {}), ingredient: query })}`
+      : null;
   const activeCategory = categories.find((c) => c.id === categoryId);
 
   return (
@@ -66,6 +82,32 @@ export default async function MealsPage({ searchParams }: PageProps<"/">) {
           <SortSelect value={sort} />
         </div>
         <CategoryFilter categories={categories} counts={Object.fromEntries(counts)} activeId={categoryId} q={query} />
+        {asIngredientHref && (
+          <Link href={asIngredientHref} className="inline-flex text-sm font-medium text-emerald-700 hover:underline">
+            🥕 Only meals with &quot;{query}&quot; as an ingredient
+          </Link>
+        )}
+        {ingredient && (
+          <div className="flex flex-wrap items-center gap-2 text-sm">
+            <span className="text-stone-500">With</span>
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 py-1.5 pr-1.5 pl-3 font-medium text-emerald-900">
+              🥕 {ingredient}
+              {variant && <span className="font-normal text-emerald-800">· {variant}</span>}
+              <Link
+                href={withoutIngredient(false)}
+                aria-label="Remove ingredient filter"
+                className="flex h-6 w-6 items-center justify-center rounded-full text-emerald-800 hover:bg-emerald-200"
+              >
+                ✕
+              </Link>
+            </span>
+            {variant && (
+              <Link href={withoutIngredient(true)} className="font-medium text-emerald-700 hover:underline">
+                Any {ingredient}
+              </Link>
+            )}
+          </div>
+        )}
       </section>
 
       <section className="space-y-3">
@@ -73,6 +115,7 @@ export default async function MealsPage({ searchParams }: PageProps<"/">) {
           {meals.length} meal{meals.length === 1 ? "" : "s"}
           {activeCategory && ` in ${activeCategory.emoji} ${activeCategory.name}`}
           {query && ` matching "${query}"`}
+          {ingredient && ` with ${variant ? `${ingredient} (${variant})` : ingredient}`}
           {filtering && (
             <>
               {" · "}
@@ -87,9 +130,9 @@ export default async function MealsPage({ searchParams }: PageProps<"/">) {
           <div className="card flex flex-col items-center gap-3 px-6 py-12 text-center">
             <span className="text-5xl">🍲</span>
             <p className="text-stone-600">
-              {query ? `Nothing found for "${query}".` : categoryId ? "No meals in this category yet." : "No meals yet."}
+              {query ? `Nothing found for "${query}".` : ingredient ? `No meals with ${ingredient} yet.` : categoryId ? "No meals in this category yet." : "No meals yet."}
             </p>
-            {!query && (
+            {!query && !ingredient && (
               <Link href="/meals/new" className="btn-primary">
                 Add your first favourite meal
               </Link>

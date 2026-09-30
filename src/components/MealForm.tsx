@@ -125,7 +125,7 @@ export function MealForm({
   const ingredientsJson = JSON.stringify(
     rows
       .filter((r) => r.name.trim())
-      .map(({ name, quantity, unit, staple }) => ({ name, quantity, unit, staple })),
+      .map(({ name, variant, quantity, quantityMax, unit, staple }) => ({ name, variant, quantity, quantityMax, unit, staple })),
   );
 
   return (
@@ -254,67 +254,94 @@ export function MealForm({
 
       <Section
         title="Shopping list"
-        hint="Mark basics like salt, pepper or oil with 🧂. They are skipped when matching meals to what you have at home."
+        hint="Kind and max are optional: chicken · breast, rice · jasmine, 600 – 700 g. Mark basics like salt, pepper or oil with 🧂; they are skipped when matching meals to what you have at home."
       >
         <div className="space-y-2">
           {rows.map((r, idx) => (
             <div
               key={r.key}
-              className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto_auto] items-center gap-2 rounded-xl bg-stone-50 p-2 sm:flex sm:bg-transparent sm:p-0"
+              className="space-y-2 rounded-xl bg-stone-50 p-2 sm:flex sm:items-center sm:gap-2 sm:space-y-0 sm:bg-transparent sm:p-0"
             >
-              <input
-                value={r.name}
-                onChange={(e) => updateRow(r.key, { name: e.target.value })}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    if (idx === rows.length - 1) setRows((rs) => [...rs, emptyRow()]);
-                  }
-                }}
-                placeholder={["Potatoes", "Onions", "Beef mince"][idx] ?? "Ingredient"}
-                aria-label="Ingredient"
-                className="input col-span-4 min-w-0 sm:flex-1"
-              />
-              <input
-                type="number"
-                min={0}
-                step="any"
-                inputMode="decimal"
-                value={r.quantity ?? ""}
-                onChange={(e) => updateRow(r.key, { quantity: e.target.value === "" ? undefined : Number(e.target.value) })}
-                placeholder="Qty"
-                aria-label="Quantity"
-                className="input sm:w-20"
-              />
-              <select
-                value={r.unit ?? ""}
-                onChange={(e) => updateRow(r.key, { unit: e.target.value || undefined })}
-                aria-label="Unit"
-                className="input sm:w-24"
-              >
-                {UNITS.map((u) => (
-                  <option key={u.value} value={u.value}>
-                    {u.label}
-                  </option>
-                ))}
-              </select>
-              <button
-                type="button"
-                title={r.staple ? "Basic ingredient (salt, oil …)" : "Mark as basic ingredient"}
-                aria-pressed={!!r.staple}
-                onClick={() => updateRow(r.key, { staple: !r.staple, touchedStaple: true })}
-                className={`h-10 w-10 rounded-lg text-lg transition ${r.staple ? "bg-amber-100" : "opacity-30 grayscale hover:opacity-70"}`}
-              >
-                🧂
-              </button>
-              <button
-                type="button"
-                onClick={() => setRows((rs) => (rs.length > 1 ? rs.filter((x) => x.key !== r.key) : [emptyRow()]))}
-                aria-label="Remove ingredient"
-                className="h-10 w-8 text-stone-400 hover:text-red-600"
-              >
-                ✕
-              </button>
+              <div className="grid grid-cols-[minmax(0,3fr)_minmax(0,2fr)_auto_auto] items-center gap-2 sm:contents">
+                <input
+                  value={r.name}
+                  onChange={(e) => updateRow(r.key, { name: e.target.value })}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      if (idx === rows.length - 1) setRows((rs) => [...rs, emptyRow()]);
+                    }
+                  }}
+                  placeholder={["Potatoes", "Onions", "Beef mince"][idx] ?? "Ingredient"}
+                  aria-label="Ingredient"
+                  className="input min-w-0 sm:flex-[3]"
+                />
+                <input
+                  value={r.variant ?? ""}
+                  onChange={(e) => updateRow(r.key, { variant: e.target.value || undefined })}
+                  placeholder={["e.g. waxy", "e.g. red", "e.g. lean"][idx] ?? "Kind (optional)"}
+                  aria-label="Kind or variety (optional)"
+                  title="Optional kind, cut or variety, e.g. breast or jasmine"
+                  className="input min-w-0 sm:flex-[2]"
+                />
+                <button
+                  type="button"
+                  title={r.staple ? "Basic ingredient (salt, oil …)" : "Mark as basic ingredient"}
+                  aria-pressed={!!r.staple}
+                  onClick={() => updateRow(r.key, { staple: !r.staple, touchedStaple: true })}
+                  className={`h-10 w-10 shrink-0 rounded-lg sm:order-1 text-lg transition ${r.staple ? "bg-amber-100" : "opacity-30 grayscale hover:opacity-70"}`}
+                >
+                  🧂
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRows((rs) => (rs.length > 1 ? rs.filter((x) => x.key !== r.key) : [emptyRow()]))}
+                  aria-label="Remove ingredient"
+                  className="h-10 w-8 shrink-0 text-stone-400 sm:order-1 hover:text-red-600"
+                >
+                  ✕
+                </button>
+              </div>
+              <div className="flex items-center gap-2 sm:contents">
+                <input
+                  type="number"
+                  min={0}
+                  step="any"
+                  inputMode="decimal"
+                  value={r.quantity ?? ""}
+                  onChange={(e) => updateRow(r.key, { quantity: e.target.value === "" ? undefined : Number(e.target.value) })}
+                  placeholder="Qty"
+                  aria-label="Quantity"
+                  className="input min-w-0 flex-1 sm:w-20 sm:flex-none"
+                />
+                <span className="text-stone-400" aria-hidden>
+                  –
+                </span>
+                <input
+                  type="number"
+                  min={0}
+                  step="any"
+                  inputMode="decimal"
+                  value={r.quantityMax ?? ""}
+                  onChange={(e) => updateRow(r.key, { quantityMax: e.target.value === "" ? undefined : Number(e.target.value) })}
+                  placeholder="Max"
+                  aria-label="Maximum quantity (optional)"
+                  title="Optional: give a range like 600 – 700 g"
+                  className="input min-w-0 flex-1 sm:w-20 sm:flex-none"
+                />
+                <select
+                  value={r.unit ?? ""}
+                  onChange={(e) => updateRow(r.key, { unit: e.target.value || undefined })}
+                  aria-label="Unit"
+                  className="input w-24 shrink-0"
+                >
+                  {UNITS.map((u) => (
+                    <option key={u.value} value={u.value}>
+                      {u.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
           ))}
         </div>

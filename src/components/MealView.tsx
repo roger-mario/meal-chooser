@@ -2,11 +2,21 @@ import { AuthorLine } from "./AuthorLine";
 import { CategoryChip } from "./CategoryChip";
 import { MealImage } from "./MealImage";
 import { MealMeta } from "./MealMeta";
+import Link from "next/link";
 import { formatQuantity, linkIcon, linkLabel } from "@/lib/meal-fields";
 import type { MealWithCategories } from "@/lib/queries";
 
 /** Photo, details, shopping list and steps; shared by the meal page and the public share page. */
-export function MealView({ meal, actions }: { meal: MealWithCategories; actions?: React.ReactNode }) {
+export function MealView({
+  meal,
+  actions,
+  ingredientLinks = false,
+}: {
+  meal: MealWithCategories;
+  actions?: React.ReactNode;
+  /** Link each ingredient's kind to the other meals using it (not on the public share page). */
+  ingredientLinks?: boolean;
+}) {
   const mainIngredients = meal.ingredients.filter((i) => !i.staple);
   const basics = meal.ingredients.filter((i) => i.staple);
   return (
@@ -40,7 +50,21 @@ export function MealView({ meal, actions }: { meal: MealWithCategories; actions?
                   <li key={i}>
                     <label className="flex cursor-pointer items-center gap-3 py-2.5 sm:py-2">
                       <input type="checkbox" className="peer h-5 w-5 shrink-0 accent-emerald-700 sm:h-4 sm:w-4" />
-                      <span className="flex-1 peer-checked:text-stone-400 peer-checked:line-through">{item.name}</span>
+                      <span className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-0.5 peer-checked:text-stone-400 peer-checked:line-through">
+                        {item.name}
+                        {item.variant &&
+                          (ingredientLinks ? (
+                            <Link
+                              href={`/?${new URLSearchParams({ ingredient: item.name, variant: item.variant })}`}
+                              title={`Other meals with ${item.variant} ${item.name}`}
+                              className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs text-emerald-800 hover:bg-emerald-100"
+                            >
+                              {item.variant}
+                            </Link>
+                          ) : (
+                            <span className="rounded-full bg-stone-100 px-2 py-0.5 text-xs text-stone-600">{item.variant}</span>
+                          ))}
+                      </span>
                       <span className="text-stone-500 tabular-nums">{formatQuantity(item)}</span>
                     </label>
                   </li>
@@ -49,7 +73,12 @@ export function MealView({ meal, actions }: { meal: MealWithCategories; actions?
               {basics.length > 0 && (
                 <p className="mt-3 text-sm text-stone-500">
                   <span className="font-medium text-stone-600">🧂 Basics:</span>{" "}
-                  {basics.map((b) => (formatQuantity(b) ? `${b.name} (${formatQuantity(b)})` : b.name)).join(", ")}
+                  {basics
+                    .map((b) => {
+                      const details = [b.variant, formatQuantity(b)].filter(Boolean).join(", ");
+                      return details ? `${b.name} (${details})` : b.name;
+                    })
+                    .join(", ")}
                 </p>
               )}
             </>

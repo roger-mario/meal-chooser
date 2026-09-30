@@ -61,7 +61,22 @@ function searchCondition(q: string): SQL | undefined {
   );
 }
 
-export async function listMeals(filters: { categoryId?: number; q?: string } = {}): Promise<MealWithCategories[]> {
+const wordStart = (s: string) => `\\m${s.trim().replace(/[\\^$.*+?()[\]{}|-]/g, (c) => `\\${c}`)}`;
+
+/**
+ * Meals with an ingredient whose name (and kind, when given) contains a word starting with the text:
+ * "rice" finds "Rice" and "basmati rice"; with kind "jasmine" only jasmine rice.
+ */
+function ingredientCondition(name: string, variant?: string): SQL {
+  const element = sql`(case when jsonb_typeof(e) = 'object' then e->>'name' else e #>> '{}' end)`;
+  return sql`exists (select 1 from jsonb_array_elements(${meals.ingredients}) e where ${element} ~* ${wordStart(name)}${
+    variant?.trim() ? sql` and e->>'variant' ~* ${wordStart(variant)}` : sql``
+  })`;
+}
+
+export type MealFilters = { categoryId?: number; q?: string; ingredient?: string; variant?: string };
+
+export async function listMeals(filters: MealFilters = {}): Promise<MealWithCategories[]> {
   const conditions = [
     filters.categoryId
       ? exists(
@@ -72,6 +87,7 @@ export async function listMeals(filters: { categoryId?: number; q?: string } = {
         )
       : undefined,
     filters.q ? searchCondition(filters.q) : undefined,
+    filters.ingredient?.trim() ? ingredientCondition(filters.ingredient, filters.variant) : undefined,
   ].filter((c): c is SQL => !!c);
 
   const rows = await selectMeals()

@@ -20,8 +20,13 @@ export type Unit = (typeof UNITS)[number]["value"];
 
 export type Ingredient = {
   name: string;
+  /** The amount, or the lower end when a range like 600–700 g is given. */
   quantity?: number;
+  /** Upper end of an optional range; always greater than `quantity`. */
+  quantityMax?: number;
   unit?: string;
+  /** Optional kind, cut or variety: "breast" for chicken, "jasmine" for rice. */
+  variant?: string;
   /** Basics like salt, pepper or oil: ignored when matching against what you have. */
   staple?: boolean;
 };
@@ -85,17 +90,27 @@ export function looksLikeStaple(name: string) {
   return STAPLE_WORDS.some((w) => n === w || n.endsWith(` ${w}`));
 }
 
-const LEGACY_LINE = /^\s*(\d+(?:[.,]\d+)?)\s*([a-zA-Z]+\.?)?\s+(.+)$/;
+const NUMBER = String.raw`(\d+(?:[.,]\d+)?)`;
+const LEGACY_LINE = new RegExp(String.raw`^\s*${NUMBER}(?:\s*[-–]\s*${NUMBER})?\s*([a-zA-Z]+\.?)?\s+(.+)$`);
+const toNumber = (s: string) => Number(s.replace(",", "."));
 
 /** Accepts the old string format and returns structured ingredients. */
 export function normalizeIngredients(items: (Ingredient | string)[] | null | undefined): Ingredient[] {
   return (items ?? []).map((item) => {
     if (typeof item !== "string") return item;
     const m = item.match(LEGACY_LINE);
-    const unit = m?.[2]?.replace(".", "").toLowerCase();
+    const unit = m?.[3]?.replace(".", "").toLowerCase();
     const known = UNITS.some((u) => u.value === unit);
-    if (m && (!m[2] || known)) {
-      return { name: m[3], quantity: Number(m[1].replace(",", ".")), unit: unit || "pcs", staple: looksLikeStaple(m[3]) };
+    if (m && (!m[3] || known)) {
+      const quantity = toNumber(m[1]);
+      const max = m[2] ? toNumber(m[2]) : undefined;
+      return {
+        name: m[4],
+        quantity,
+        quantityMax: max && max > quantity ? max : undefined,
+        unit: unit || "pcs",
+        staple: looksLikeStaple(m[4]),
+      };
     }
     return { name: item, staple: looksLikeStaple(item) };
   });
@@ -109,16 +124,24 @@ export function normalizeSteps(steps: string[] | null | undefined, legacy?: stri
     .filter(Boolean);
 }
 
+const roundQty = (n: number) => (Number.isInteger(n) ? n : Math.round(n * 100) / 100);
+
+/** "200 g", "600–700 g", "2" … */
 export function formatQuantity(i: Ingredient) {
   if (i.unit === "to taste") return "to taste";
   if (i.quantity == null) return i.unit && i.unit !== "pcs" ? i.unit : "";
-  const q = Number.isInteger(i.quantity) ? i.quantity : Math.round(i.quantity * 100) / 100;
-  return !i.unit || i.unit === "pcs" ? `${q}` : `${q} ${i.unit}`;
+  const q = i.quantityMax ? `${roundQty(i.quantity)}–${roundQty(i.quantityMax)}` : `${roundQty(i.quantity)}`;
+  return !i.unit || i.unit === "pcs" ? q : `${q} ${i.unit}`;
+}
+
+/** "chicken (breast)", or just the name without a variant. */
+export function ingredientName(i: Ingredient) {
+  return i.variant ? `${i.name} (${i.variant})` : i.name;
 }
 
 export function formatIngredient(i: Ingredient) {
   const q = formatQuantity(i);
-  return q ? `${q} ${i.name}` : i.name;
+  return q ? `${q} ${ingredientName(i)}` : ingredientName(i);
 }
 
 export function totalMinutes(m: { prepMinutes: number | null; cookMinutes: number | null }) {
@@ -159,12 +182,24 @@ export function sanitizeIngredients(items: unknown): Ingredient[] {
     const i = (typeof raw === "string" ? normalizeIngredients([raw])[0] : raw) as Partial<Ingredient> | null;
     const name = typeof i?.name === "string" ? i.name.trim() : "";
     if (!name) return [];
-    const quantity = Number(i?.quantity);
+    const positive = (v: unknown) => {
+      const n = v == null || v === "" ? NaN : Number(v);
+      return Number.isFinite(n) && n > 0 ? n : undefined;
+    };
+    let quantity = positive(i?.quantity);
+    let quantityMax = positive(i?.quantityMax);
+    // A range typed the wrong way round is swapped; a lone upper bound becomes the amount.
+    if (quantity && quantityMax && quantityMax < quantity) [quantity, quantityMax] = [quantityMax, quantity];
+    if (!quantity && quantityMax) [quantity, quantityMax] = [quantityMax, undefined];
+    if (quantityMax === quantity) quantityMax = undefined;
+    const variant = typeof i?.variant === "string" ? i.variant.trim().slice(0, 80) : "";
     return [
       {
         name,
-        quantity: Number.isFinite(quantity) && quantity > 0 ? quantity : undefined,
+        quantity,
+        quantityMax,
         unit: UNITS.some((u) => u.value && u.value === i?.unit) ? i?.unit : undefined,
+        variant: variant || undefined,
         staple: typeof i?.staple === "boolean" ? i.staple : looksLikeStaple(name),
       },
     ];
