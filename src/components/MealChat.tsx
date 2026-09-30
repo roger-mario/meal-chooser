@@ -177,7 +177,7 @@ export function MealChat({
               e.currentTarget.form?.requestSubmit();
             }
           }}
-          className="field-sizing-content max-h-40 min-h-11 flex-1 resize-none rounded-3xl border-0 bg-white px-4 py-2.5 text-[15px] shadow-sm outline-none placeholder:text-stone-400 focus:ring-2 focus:ring-emerald-600/30 disabled:bg-stone-100"
+          className="field-sizing-content max-h-40 min-h-11 flex-1 resize-none rounded-3xl border-0 bg-white px-4 py-2.5 text-base shadow-sm sm:text-[15px] outline-none placeholder:text-stone-400 focus:ring-2 focus:ring-emerald-600/30 disabled:bg-stone-100"
         />
         <button
           type="submit"

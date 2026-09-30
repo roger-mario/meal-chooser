@@ -39,7 +39,7 @@ const emptyRow = (): Row => ({ key: nextKey++, name: "", unit: "g" });
 
 function Section({ title, hint, children }: { title: string; hint?: string; children: React.ReactNode }) {
   return (
-    <section className="card space-y-4 p-5 sm:p-6">
+    <section className="card space-y-4 p-4 sm:p-6">
       <div>
         <h2 className="text-base font-semibold">{title}</h2>
         {hint && <p className="text-sm text-stone-500">{hint}</p>}
@@ -71,7 +71,7 @@ function Segmented<T extends string>({
           key={o.label}
           type="button"
           onClick={() => onChange(o.value)}
-          className={`rounded-lg px-3 py-1.5 text-sm transition ${
+          className={`rounded-lg px-3 py-2 text-sm transition sm:py-1.5 ${
             value === o.value ? "bg-white font-medium text-stone-900 shadow-sm" : "text-stone-500 hover:text-stone-800"
           }`}
         >
@@ -161,7 +161,7 @@ export function MealForm({
             <label className="label" htmlFor="servings">Servings</label>
             <div className="flex items-center rounded-lg border border-stone-300 bg-white">
               <button type="button" className="px-3 py-2 text-stone-500 hover:text-stone-900" onClick={() => setServings((s) => Math.max(1, s - 1))} aria-label="Fewer servings">−</button>
-              <input id="servings" name="servings" type="number" min={1} value={servings} onChange={(e) => setServings(Math.max(1, Number(e.target.value) || 1))} className="w-full min-w-0 bg-transparent py-2 text-center text-sm focus:outline-none" />
+              <input id="servings" name="servings" type="number" min={1} value={servings} onChange={(e) => setServings(Math.max(1, Number(e.target.value) || 1))} className="w-full min-w-0 bg-transparent py-2 text-center text-base focus:outline-none sm:text-sm" />
               <button type="button" className="px-3 py-2 text-stone-500 hover:text-stone-900" onClick={() => setServings((s) => s + 1)} aria-label="More servings">+</button>
             </div>
           </div>
@@ -169,14 +169,14 @@ export function MealForm({
             <label className="label" htmlFor="prepMinutes">Prep time</label>
             <div className="relative">
               <input id="prepMinutes" name="prepMinutes" type="number" min={0} inputMode="numeric" value={prep} onChange={(e) => setPrep(e.target.value)} placeholder="15" className="input pr-12" />
-              <span className="pointer-events-none absolute right-3 top-2 text-sm text-stone-400">min</span>
+              <span className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-sm text-stone-400">min</span>
             </div>
           </div>
           <div>
             <label className="label" htmlFor="cookMinutes">Cooking time</label>
             <div className="relative">
               <input id="cookMinutes" name="cookMinutes" type="number" min={0} inputMode="numeric" value={cook} onChange={(e) => setCook(e.target.value)} placeholder="30" className="input pr-12" />
-              <span className="pointer-events-none absolute right-3 top-2 text-sm text-stone-400">min</span>
+              <span className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-sm text-stone-400">min</span>
             </div>
           </div>
           <div>
@@ -186,7 +186,7 @@ export function MealForm({
             </div>
           </div>
         </div>
-        <div className="flex flex-wrap gap-6">
+        <div className="flex flex-wrap gap-x-6 gap-y-4">
           <div>
             <span className="label">Difficulty <span className="font-normal text-stone-400">(optional)</span></span>
             <Segmented name="difficulty" options={DIFFICULTIES} value={difficulty} onChange={setDifficulty} noneLabel="Not set" />
@@ -258,7 +258,10 @@ export function MealForm({
       >
         <div className="space-y-2">
           {rows.map((r, idx) => (
-            <div key={r.key} className="flex items-center gap-2">
+            <div
+              key={r.key}
+              className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto_auto] items-center gap-2 rounded-xl bg-stone-50 p-2 sm:flex sm:bg-transparent sm:p-0"
+            >
               <input
                 value={r.name}
                 onChange={(e) => updateRow(r.key, { name: e.target.value })}
@@ -270,7 +273,7 @@ export function MealForm({
                 }}
                 placeholder={["Potatoes", "Onions", "Beef mince"][idx] ?? "Ingredient"}
                 aria-label="Ingredient"
-                className="input min-w-0 flex-1"
+                className="input col-span-4 min-w-0 sm:flex-1"
               />
               <input
                 type="number"
@@ -281,13 +284,13 @@ export function MealForm({
                 onChange={(e) => updateRow(r.key, { quantity: e.target.value === "" ? undefined : Number(e.target.value) })}
                 placeholder="Qty"
                 aria-label="Quantity"
-                className="input w-20"
+                className="input sm:w-20"
               />
               <select
                 value={r.unit ?? ""}
                 onChange={(e) => updateRow(r.key, { unit: e.target.value || undefined })}
                 aria-label="Unit"
-                className="input w-24"
+                className="input sm:w-24"
               >
                 {UNITS.map((u) => (
                   <option key={u.value} value={u.value}>
@@ -300,7 +303,7 @@ export function MealForm({
                 title={r.staple ? "Basic ingredient (salt, oil …)" : "Mark as basic ingredient"}
                 aria-pressed={!!r.staple}
                 onClick={() => updateRow(r.key, { staple: !r.staple, touchedStaple: true })}
-                className={`rounded-lg px-2 py-2 text-lg transition ${r.staple ? "bg-amber-100" : "opacity-30 grayscale hover:opacity-70"}`}
+                className={`h-10 w-10 rounded-lg text-lg transition ${r.staple ? "bg-amber-100" : "opacity-30 grayscale hover:opacity-70"}`}
               >
                 🧂
               </button>
@@ -308,7 +311,7 @@ export function MealForm({
                 type="button"
                 onClick={() => setRows((rs) => (rs.length > 1 ? rs.filter((x) => x.key !== r.key) : [emptyRow()]))}
                 aria-label="Remove ingredient"
-                className="px-1 text-stone-400 hover:text-red-600"
+                className="h-10 w-8 text-stone-400 hover:text-red-600"
               >
                 ✕
               </button>
@@ -323,7 +326,7 @@ export function MealForm({
       <Section title="Steps">
         <ol className="space-y-3">
           {steps.map((s, idx) => (
-            <li key={idx} className="flex items-start gap-3">
+            <li key={idx} className="flex items-start gap-2 sm:gap-3">
               <span className="mt-1.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-700 text-sm font-semibold text-white">
                 {idx + 1}
               </span>
@@ -339,7 +342,7 @@ export function MealForm({
                 type="button"
                 onClick={() => setSteps((st) => (st.length > 1 ? st.filter((_, i) => i !== idx) : [""]))}
                 aria-label="Remove step"
-                className="mt-2 px-1 text-stone-400 hover:text-red-600"
+                className="h-10 w-8 text-stone-400 hover:text-red-600"
               >
                 ✕
               </button>
@@ -354,7 +357,7 @@ export function MealForm({
       <Section title="Sources" hint="Optional: links to the original recipe, a video, a blog post …">
         <div className="space-y-2">
           {links.map((l, idx) => (
-            <div key={idx} className="flex flex-wrap items-center gap-2 sm:flex-nowrap">
+            <div key={idx} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 sm:flex">
               <input
                 value={l.url}
                 onChange={(e) => setLinks((ls) => ls.map((x, i) => (i === idx ? { ...x, url: e.target.value } : x)))}
@@ -362,20 +365,20 @@ export function MealForm({
                 inputMode="url"
                 placeholder="https://www.youtube.com/watch?v=…"
                 aria-label="Link"
-                className="input min-w-0 flex-[2]"
+                className="input col-span-2 min-w-0 sm:flex-[2]"
               />
               <input
                 value={l.label ?? ""}
                 onChange={(e) => setLinks((ls) => ls.map((x, i) => (i === idx ? { ...x, label: e.target.value } : x)))}
                 placeholder="Name (optional)"
                 aria-label="Link name"
-                className="input min-w-0 flex-1"
+                className="input min-w-0 sm:flex-1"
               />
               <button
                 type="button"
                 onClick={() => setLinks((ls) => (ls.length > 1 ? ls.filter((_, i) => i !== idx) : [{ url: "" }]))}
                 aria-label="Remove link"
-                className="px-1 text-stone-400 hover:text-red-600"
+                className="h-10 w-8 text-stone-400 hover:text-red-600"
               >
                 ✕
               </button>
@@ -387,9 +390,11 @@ export function MealForm({
         </button>
       </Section>
 
-      <div className="sticky bottom-0 -mx-4 flex items-center justify-end gap-4 border-t border-stone-200 bg-stone-50/90 px-4 py-3 backdrop-blur">
-        {state?.error && <p className="mr-auto text-sm text-red-600">{state.error}</p>}
-        <SubmitButton pendingText="Saving…">{initial ? "Save changes" : "Save meal"}</SubmitButton>
+      <div className="sticky bottom-0 z-10 -mx-4 flex flex-col gap-2 border-t border-stone-200 bg-stone-50/95 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur sm:flex-row sm:items-center sm:justify-end sm:gap-4">
+        {state?.error && <p className="text-sm text-red-600 sm:mr-auto">{state.error}</p>}
+        <SubmitButton pendingText="Saving…" className="btn-primary h-12 w-full text-base sm:h-auto sm:w-auto sm:text-sm">
+          {initial ? "Save changes" : "Save meal"}
+        </SubmitButton>
       </div>
     </form>
   );

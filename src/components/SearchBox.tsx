@@ -29,9 +29,9 @@ export function SearchBox() {
         type="search"
         value={value}
         onChange={(e) => setValue(e.target.value)}
-        placeholder="Search meals, ingredients, authors… e.g. chicken"
+        placeholder="Search meals or ingredients…"
         aria-label="Search meals"
-        className="input rounded-xl py-2.5 pl-10 text-base"
+        className="input h-11 rounded-xl pl-10 text-base sm:text-sm"
       />
     </div>
   );

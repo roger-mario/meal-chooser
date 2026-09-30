@@ -14,7 +14,9 @@ export function BringButton({ token, servings }: { token: string; servings: numb
 
   return (
     <button type="button" className="btn" onClick={open} title="Add the ingredients (without basics like salt or oil) to a Bring! list">
-      🛒 Add to Bring!
+      🛒
+      <span className="sm:hidden">Bring!</span>
+      <span className="hidden sm:inline">Add to Bring!</span>
     </button>
   );
 }

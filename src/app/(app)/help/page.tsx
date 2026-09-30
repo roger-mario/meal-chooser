@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 
 function Section({ id, title, children }: { id: string; title: string; children: React.ReactNode }) {
   return (
-    <section id={id} className="card scroll-mt-20 space-y-3 p-6 text-sm leading-relaxed text-stone-700">
+    <section id={id} className="card scroll-mt-20 space-y-3 p-4 text-sm sm:p-6 leading-relaxed text-stone-700">
       <h2 className="text-lg font-semibold text-stone-900">{title}</h2>
       {children}
     </section>
@@ -62,11 +62,11 @@ export default async function HelpPage() {
     <div className="mx-auto max-w-3xl space-y-5">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Help</h1>
-        <p className="text-stone-600">How to share meals, keep a backup and connect other tools.</p>
+        <p className="text-sm text-stone-600 sm:text-base">How to share meals, keep a backup and connect other tools.</p>
       </div>
-      <nav className="flex flex-wrap gap-2">
+      <nav className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:px-0">
         {toc.map(([id, label]) => (
-          <a key={id} href={`#${id}`} className="rounded-full border border-stone-200 bg-white px-3 py-1.5 text-sm hover:border-stone-400">
+          <a key={id} href={`#${id}`} className="shrink-0 rounded-full border border-stone-200 bg-white px-3 py-1.5 text-sm whitespace-nowrap hover:border-stone-400">
             {label}
           </a>
         ))}
@@ -133,15 +133,15 @@ export default async function HelpPage() {
             In Vercel, open your project → <b>Settings → Environment Variables</b>.
           </li>
           <li>
-            Add <code className="rounded bg-stone-100 px-1">API_KEY</code> with a long random secret (like a
+            Add <code className="rounded bg-stone-100 px-1 break-all">API_KEY</code> with a long random secret (like a
             password, at least 32 characters).
           </li>
           <li>Redeploy. Give the key only to tools you trust; anyone with it can add meals.</li>
         </ol>
         <h3 className="pt-1 font-semibold text-stone-900">How tools use it</h3>
         <p>
-          Send a <b>POST</b> request to <code className="rounded bg-stone-100 px-1">{origin}/api/v1/meals</code> with
-          the header <code className="rounded bg-stone-100 px-1">Authorization: Bearer YOUR_API_KEY</code> and a meal
+          Send a <b>POST</b> request to <code className="rounded bg-stone-100 px-1 break-all">{origin}/api/v1/meals</code> with
+          the header <code className="rounded bg-stone-100 px-1 break-all">Authorization: Bearer YOUR_API_KEY</code> and a meal
           as JSON. Everything except <code>name</code> is optional; missing categories are created. To add several
           meals at once, send <code>{`{ "meals": [ … ] }`}</code>.
         </p>
@@ -160,8 +160,8 @@ export default async function HelpPage() {
         <p>
           When AI is on, each meal gets buttons to estimate <b>nutrition</b> and <b>Migros prices</b>. When it is off,
           you can type the values in yourself on the meal page. To turn it on, add{" "}
-          <code className="rounded bg-stone-100 px-1">AI_MODEL</code> and{" "}
-          <code className="rounded bg-stone-100 px-1">AI_GATEWAY_API_KEY</code> in Vercel&apos;s environment
+          <code className="rounded bg-stone-100 px-1 break-all">AI_MODEL</code> and{" "}
+          <code className="rounded bg-stone-100 px-1 break-all">AI_GATEWAY_API_KEY</code> in Vercel&apos;s environment
           variables and redeploy.
         </p>
       </Section>

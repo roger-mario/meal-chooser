@@ -22,7 +22,7 @@ export function ImportBackupForm() {
         name="file"
         accept="application/json,.json"
         required
-        className="block text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-stone-200 file:px-3 file:py-2"
+        className="block w-full max-w-full text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-stone-200 file:px-3 file:py-2"
       />
       <div className="space-y-1.5 text-sm">
         <label className="flex items-start gap-2">

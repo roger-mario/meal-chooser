@@ -11,24 +11,25 @@ export function MealView({ meal, actions }: { meal: MealWithCategories; actions?
   const basics = meal.ingredients.filter((i) => i.staple);
   return (
     <>
-      <div className="card overflow-hidden md:grid md:grid-cols-2">
+      {/* Edge to edge on phones, a card on bigger screens. */}
+      <div className="card -mx-4 -mt-5 overflow-hidden rounded-none border-x-0 border-t-0 sm:mx-0 sm:mt-0 sm:rounded-xl sm:border md:grid md:grid-cols-2">
         <MealImage src={meal.imageUrl} alt={meal.name} />
-        <div className="flex flex-col gap-3 p-6">
+        <div className="flex flex-col gap-3 p-4 sm:p-6">
           <div className="flex flex-wrap gap-1.5">
             {meal.categories.map((c) => (
               <CategoryChip key={c.id} category={c} showName />
             ))}
           </div>
-          <h1 className="text-3xl font-semibold tracking-tight">{meal.name}</h1>
+          <h1 className="text-2xl leading-tight font-semibold tracking-tight sm:text-3xl">{meal.name}</h1>
           {meal.description && <p className="text-stone-600">{meal.description}</p>}
           <MealMeta meal={meal} detailed />
           <AuthorLine author={meal.author} createdAt={meal.createdAt} updatedAt={meal.updatedAt} />
-          {actions && <div className="mt-auto flex flex-wrap gap-2 pt-4">{actions}</div>}
+          {actions && <div className="mt-auto flex flex-wrap gap-2 pt-2 *:flex-1 sm:pt-4 sm:*:flex-none">{actions}</div>}
         </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-5">
-        <section className="card h-fit p-6 lg:col-span-2">
+      <div className="grid gap-4 sm:gap-6 lg:grid-cols-5">
+        <section className="card h-fit p-4 sm:p-6 lg:col-span-2">
           <h2 className="mb-3 text-lg font-semibold">🛒 Shopping list</h2>
           {meal.ingredients.length === 0 ? (
             <p className="text-sm text-stone-500">No ingredients yet.</p>
@@ -37,8 +38,8 @@ export function MealView({ meal, actions }: { meal: MealWithCategories; actions?
               <ul className="divide-y divide-stone-100 text-sm">
                 {mainIngredients.map((item, i) => (
                   <li key={i}>
-                    <label className="flex cursor-pointer items-center gap-3 py-2">
-                      <input type="checkbox" className="peer h-4 w-4 accent-emerald-700" />
+                    <label className="flex cursor-pointer items-center gap-3 py-2.5 sm:py-2">
+                      <input type="checkbox" className="peer h-5 w-5 shrink-0 accent-emerald-700 sm:h-4 sm:w-4" />
                       <span className="flex-1 peer-checked:text-stone-400 peer-checked:line-through">{item.name}</span>
                       <span className="text-stone-500 tabular-nums">{formatQuantity(item)}</span>
                     </label>
@@ -55,7 +56,7 @@ export function MealView({ meal, actions }: { meal: MealWithCategories; actions?
           )}
         </section>
 
-        <section className="card p-6 lg:col-span-3">
+        <section className="card p-4 sm:p-6 lg:col-span-3">
           <h2 className="mb-4 text-lg font-semibold">👩‍🍳 Steps</h2>
           {meal.steps.length === 0 ? (
             <p className="text-sm text-stone-500">No steps yet.</p>

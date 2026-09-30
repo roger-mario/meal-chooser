@@ -7,10 +7,11 @@
 
 body {
   @apply bg-stone-50 text-stone-900;
+  -webkit-tap-highlight-color: transparent;
 }
 
 @utility btn {
-  @apply inline-flex items-center justify-center gap-2 rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm font-medium hover:bg-stone-100 disabled:opacity-50;
+  @apply inline-flex items-center justify-center gap-2 min-h-10 rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm font-medium whitespace-nowrap transition select-none hover:bg-stone-100 active:scale-[0.98] disabled:opacity-50;
 }
 @utility btn-primary {
   @apply btn border-emerald-700 bg-emerald-700 text-white hover:bg-emerald-800;
@@ -18,11 +19,16 @@ body {
 @utility btn-danger {
   @apply btn border-red-300 text-red-700 hover:bg-red-50;
 }
+/* 16px text on phones, otherwise iOS zooms in when a field is focused. */
 @utility input {
-  @apply w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/20;
+  @apply w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-base sm:text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/20;
 }
 @utility label {
   @apply mb-1 block text-sm font-medium text-stone-700;
+}
+/* Space for the phone tab bar and the iPhone home indicator. */
+@utility pb-safe {
+  padding-bottom: env(safe-area-inset-bottom);
 }
 @utility card {
   @apply rounded-xl border border-stone-200 bg-white shadow-sm;

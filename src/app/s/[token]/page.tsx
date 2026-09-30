@@ -24,23 +24,23 @@ export default async function SharedMealPage({ params }: PageProps<"/s/[token]">
   return (
     <>
       <header className="border-b border-stone-200 bg-white">
-        <div className="mx-auto flex max-w-5xl items-center gap-2 px-4 py-3 text-lg font-semibold tracking-tight">
+        <div className="mx-auto flex h-14 max-w-5xl items-center gap-2 px-4 text-lg font-semibold tracking-tight">
           <span className="text-2xl">🍲</span> Otao
           <span className="ml-auto rounded-full bg-stone-100 px-3 py-1 text-xs font-normal text-stone-500">
-            Shared recipe · view only
+            <span className="sm:hidden">View only</span><span className="hidden sm:inline">Shared recipe · view only</span>
           </span>
         </div>
       </header>
-      <main className="mx-auto w-full max-w-5xl flex-1 space-y-6 px-4 py-6">
+      <main className="pb-safe mx-auto w-full max-w-5xl flex-1 space-y-4 px-4 py-5 sm:space-y-6 sm:py-8">
         <MealView meal={meal} />
         {meal.cost && meal.cost.items.length > 0 && (
-          <section className="card space-y-4 p-6">
+          <section className="card space-y-4 p-4 sm:p-6">
             <h2 className="text-lg font-semibold">💰 Cost at {meal.cost.store}</h2>
             <CostPanel cost={meal.cost} servings={meal.servings} />
           </section>
         )}
         {meal.nutrition && (
-          <section className="card space-y-4 p-6">
+          <section className="card space-y-4 p-4 sm:p-6">
             <h2 className="text-lg font-semibold">🥗 Nutrition per serving</h2>
             <NutritionPanel nutrition={meal.nutrition} />
           </section>

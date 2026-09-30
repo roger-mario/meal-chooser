@@ -14,10 +14,10 @@ export default async function CookPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5 sm:space-y-6">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">What can I cook?</h1>
-        <p className="text-stone-600">Add what you have at home and see which meals you can (almost) make.</p>
+        <p className="text-sm text-stone-600 sm:text-base">Add what you have at home and see which meals you can (almost) make.</p>
       </div>
       <PantryMatcher
         meals={meals.map((m) => ({

@@ -54,8 +54,8 @@ export function PantryMatcher({ meals, suggestions }: { meals: MealLite[]; sugge
   const quickPicks = suggestions.filter((s) => !have.some((h) => ingredientKey(h) === ingredientKey(s))).slice(0, 24);
 
   return (
-    <div className="grid gap-6 lg:grid-cols-5">
-      <section className="card h-fit space-y-4 p-5 lg:col-span-2">
+    <div className="grid gap-4 sm:gap-6 lg:grid-cols-5">
+      <section className="card h-fit space-y-4 p-4 sm:p-5 lg:col-span-2">
         <h2 className="font-semibold">🧺 I have…</h2>
         <form
           onSubmit={(e) => {
@@ -104,7 +104,7 @@ export function PantryMatcher({ meals, suggestions }: { meals: MealLite[]; sugge
             <p className="mb-2 text-xs font-medium uppercase tracking-wide text-stone-400">From your recipes</p>
             <div className="flex flex-wrap gap-1.5">
               {quickPicks.map((s) => (
-                <button key={s} onClick={() => add(s)} className="rounded-full border border-stone-200 px-2.5 py-1 text-xs text-stone-600 hover:border-emerald-500 hover:text-emerald-800">
+                <button key={s} onClick={() => add(s)} className="rounded-full border border-stone-200 px-3 py-1.5 text-sm text-stone-600 sm:px-2.5 sm:py-1 sm:text-xs hover:border-emerald-500 hover:text-emerald-800">
                   + {s}
                 </button>
               ))}
@@ -116,12 +116,12 @@ export function PantryMatcher({ meals, suggestions }: { meals: MealLite[]; sugge
 
       <section className="space-y-3 lg:col-span-3">
         {have.length === 0 ? (
-          <div className="card p-10 text-center text-stone-500">Add a few ingredients to see matching meals.</div>
+          <div className="card px-6 py-10 text-center text-stone-500">Add a few ingredients to see matching meals.</div>
         ) : results.length === 0 ? (
-          <div className="card p-10 text-center text-stone-500">No meal uses these ingredients yet.</div>
+          <div className="card px-6 py-10 text-center text-stone-500">No meal uses these ingredients yet.</div>
         ) : (
           results.map((r) => (
-            <Link key={r.id} href={`/meals/${r.id}`} className="card flex gap-4 p-4 transition hover:shadow-md">
+            <Link key={r.id} href={`/meals/${r.id}`} className="card flex gap-3 p-3 transition hover:shadow-md sm:gap-4 sm:p-4">
               <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-orange-50 text-2xl">
                 {r.imageUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element

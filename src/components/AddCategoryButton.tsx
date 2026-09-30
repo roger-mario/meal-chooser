@@ -5,7 +5,7 @@ import { createCategory, type CategoryFormState } from "@/app/actions/categories
 import { CategoryFields } from "./CategoryFields";
 import { SubmitButton } from "./SubmitButton";
 
-export function AddCategoryButton() {
+export function AddCategoryButton({ className = "btn" }: { className?: string }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const [formKey, setFormKey] = useState(0);
   const [state, action] = useActionState(async (prev: CategoryFormState, fd: FormData) => {
@@ -18,7 +18,7 @@ export function AddCategoryButton() {
     <>
       <button
         type="button"
-        className="btn hidden sm:inline-flex"
+        className={className}
         onClick={() => {
           setFormKey((k) => k + 1);
           dialog.current?.showModal();

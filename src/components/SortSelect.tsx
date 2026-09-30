@@ -18,7 +18,7 @@ export function SortSelect({ value }: { value: Sort }) {
           else next.set("sort", e.target.value);
           router.replace(`${pathname}${next.size ? `?${next}` : ""}`, { scroll: false });
         }}
-        className="input h-full cursor-pointer appearance-none rounded-xl py-2.5 pr-9 pl-3 text-sm font-medium text-stone-700"
+        className="input h-11 cursor-pointer appearance-none rounded-xl pr-8 pl-3 text-base font-medium text-stone-700 sm:text-sm"
       >
         {SORTS.map((s) => (
           <option key={s.value} value={s.value}>

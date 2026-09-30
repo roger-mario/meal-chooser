@@ -39,20 +39,23 @@ export default async function MealsPage({ searchParams }: PageProps<"/">) {
   const activeCategory = categories.find((c) => c.id === categoryId);
 
   return (
-    <div className="space-y-6">
-      <section className="space-y-4">
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <p className="text-sm text-stone-500">{formatDay(today, { weekday: "long", day: "numeric", month: "long" })}</p>
-            <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-              {greeting()}
-              {me ? `, ${me.name}` : ""} 👋
-            </h1>
-          </div>
-          <Link href={categoryId ? `/random?category=${categoryId}` : "/random"} className="btn" prefetch={false}>
-            🎲 Surprise me
-          </Link>
+    <div className="space-y-5 sm:space-y-6">
+      <section className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-sm text-stone-500">{formatDay(today, { weekday: "long", day: "numeric", month: "long" })}</p>
+          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+            {greeting()}
+            {me ? `, ${me.name}` : ""} 👋
+          </h1>
         </div>
+        <Link
+          href={categoryId ? `/random?category=${categoryId}` : "/random"}
+          className="btn h-11 w-11 shrink-0 rounded-full p-0 text-xl sm:h-auto sm:w-auto sm:rounded-lg sm:px-3 sm:text-sm"
+          prefetch={false}
+          title="Surprise me"
+        >
+          🎲<span className="hidden sm:inline">Surprise me</span>
+        </Link>
       </section>
 
       <section className="space-y-3">
@@ -81,7 +84,7 @@ export default async function MealsPage({ searchParams }: PageProps<"/">) {
         </p>
 
         {meals.length === 0 ? (
-          <div className="card flex flex-col items-center gap-3 p-12 text-center">
+          <div className="card flex flex-col items-center gap-3 px-6 py-12 text-center">
             <span className="text-5xl">🍲</span>
             <p className="text-stone-600">
               {query ? `Nothing found for "${query}".` : categoryId ? "No meals in this category yet." : "No meals yet."}
@@ -100,7 +103,7 @@ export default async function MealsPage({ searchParams }: PageProps<"/">) {
               </li>
             ))}
             {!filtering && (
-              <li>
+              <li className="hidden sm:block">
                 <Link
                   href="/meals/new"
                   className="flex h-full min-h-48 flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-stone-200 p-6 text-center text-stone-500 transition hover:border-emerald-600 hover:text-emerald-700"

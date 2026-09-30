@@ -75,8 +75,8 @@ export function MealCard({ meal, comments = 0 }: { meal: MealWithCategories; com
           ) : (
             <span className="text-stone-400">Added</span>
           )}
-          <span className="text-stone-300">·</span>
-          <time dateTime={meal.createdAt.toISOString()} className="shrink-0">
+          <span className="hidden text-stone-300 sm:inline">·</span>
+          <time dateTime={meal.createdAt.toISOString()} className="hidden shrink-0 sm:inline">
             {shortDate(meal.createdAt)}
           </time>
           {comments > 0 && (

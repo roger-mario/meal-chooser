@@ -63,7 +63,8 @@ export function CategoryFilter({
             style={active ? { backgroundColor: c.color } : undefined}
           >
             <span className="text-base leading-none">{c.emoji}</span>
-            <span className={showNames || active ? "" : "hidden group-hover:inline"}>{c.name}</span>
+            {/* Phones have no hover, so names always show there; the row scrolls sideways. */}
+            <span className={showNames || active ? "" : "sm:hidden sm:group-hover:inline"}>{c.name}</span>
             {(showNames || active) && counts[c.id] != null && (
               <span className={`text-xs ${active ? "text-white/80" : "text-stone-400"}`}>{counts[c.id]}</span>
             )}
@@ -72,10 +73,10 @@ export function CategoryFilter({
       })}
       {categories.length > 0 && (
         <>
-          <button type="button" onClick={toggle} className="shrink-0 px-2 text-xs text-stone-500 hover:text-stone-800">
+          <button type="button" onClick={toggle} className="hidden shrink-0 px-2 text-xs text-stone-500 hover:text-stone-800 sm:inline">
             {showNames ? "Hide names" : "Show names"}
           </button>
-          <Link href="/categories" className="shrink-0 px-1 text-xs text-stone-500 hover:text-stone-800">
+          <Link href="/categories" className="hidden shrink-0 px-1 text-xs text-stone-500 hover:text-stone-800 sm:inline">
             Edit categories
           </Link>
         </>

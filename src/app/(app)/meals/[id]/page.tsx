@@ -1,14 +1,14 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { deleteMeal, estimateMealCost, estimateMealNutrition } from "@/app/actions/meals";
+import { estimateMealCost, estimateMealNutrition } from "@/app/actions/meals";
 import { BringButton } from "@/components/BringButton";
 import { CostForm, CostPanel } from "@/components/CostPanel";
+import { DeleteMealButton } from "@/components/DeleteMealButton";
 import { EstimateButton } from "@/components/EstimateButton";
 import { MealView } from "@/components/MealView";
 import { NutritionForm } from "@/components/NutritionForm";
 import { NutritionPanel } from "@/components/NutritionPanel";
 import { ShareButton } from "@/components/ShareButton";
-import { SubmitButton } from "@/components/SubmitButton";
 import { bringLines, bringToken } from "@/lib/bring";
 import { jobStatus } from "@/lib/ai-errors";
 import { COST_STORE } from "@/lib/cost";
@@ -30,7 +30,7 @@ export default async function MealPage({ params }: PageProps<"/meals/[id]">) {
   const ai = aiAvailable();
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <MealView
         meal={meal}
         actions={
@@ -42,16 +42,11 @@ export default async function MealPage({ params }: PageProps<"/meals/[id]">) {
             {bringLines(meal.ingredients).length > 0 && (
               <BringButton token={bringToken(meal.id)} servings={meal.servings} />
             )}
-            <form action={deleteMeal.bind(null, meal.id)} className="ml-auto">
-              <SubmitButton className="btn-danger" pendingText="Deleting…">
-                Delete
-              </SubmitButton>
-            </form>
           </>
         }
       />
 
-      <section className="card space-y-4 p-6">
+      <section className="card space-y-4 p-4 sm:p-6">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="text-lg font-semibold">💰 Cost at {COST_STORE}</h2>
           {ai && (
@@ -76,7 +71,7 @@ export default async function MealPage({ params }: PageProps<"/meals/[id]">) {
         <CostForm mealId={meal.id} ingredients={meal.ingredients} cost={meal.cost} />
       </section>
 
-      <section className="card space-y-4 p-6">
+      <section className="card space-y-4 p-4 sm:p-6">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="text-lg font-semibold">🥗 Nutrition per serving</h2>
           {ai && (
@@ -112,6 +107,10 @@ export default async function MealPage({ params }: PageProps<"/meals/[id]">) {
           timeZone={TIME_ZONE}
         />
       </section>
+
+      <div className="flex justify-center pt-2">
+        <DeleteMealButton mealId={meal.id} name={meal.name} />
+      </div>
     </div>
   );
 }
