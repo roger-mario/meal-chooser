@@ -25,7 +25,8 @@ export default async function SharedMealPage({ params }: PageProps<"/s/[token]">
     <>
       <header className="border-b border-stone-200 bg-white">
         <div className="mx-auto flex h-14 max-w-5xl items-center gap-2 px-4 text-lg font-semibold tracking-tight">
-          <span className="text-2xl">🍲</span> Otao
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/icon.svg" alt="" width={28} height={28} className="h-7 w-7" /> Otao
           <span className="ml-auto rounded-full bg-stone-100 px-3 py-1 text-xs font-normal text-stone-500">
             <span className="sm:hidden">View only</span><span className="hidden sm:inline">Shared recipe · view only</span>
           </span>

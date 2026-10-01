@@ -2,6 +2,7 @@
 
 import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { dataChanged } from "@/lib/cache";
 import { db, mealComments } from "@/db";
 import { getCurrentUser } from "@/lib/users";
 
@@ -16,6 +17,7 @@ export async function sendComment(mealId: number, _prev: ChatState, formData: Fo
   if (!body) return null;
   if (body.length > MAX_LENGTH) return { error: `Please keep it under ${MAX_LENGTH} characters.` };
   await db().insert(mealComments).values({ mealId, userId: user.id, body });
+  dataChanged();
   revalidatePath(`/meals/${mealId}`);
   return { sent: Date.now() };
 }
@@ -28,5 +30,8 @@ export async function deleteComment(id: number) {
     .delete(mealComments)
     .where(and(eq(mealComments.id, id), eq(mealComments.userId, user.id)))
     .returning({ mealId: mealComments.mealId });
-  if (row) revalidatePath(`/meals/${row.mealId}`);
+  if (row) {
+    dataChanged();
+    revalidatePath(`/meals/${row.mealId}`);
+  }
 }

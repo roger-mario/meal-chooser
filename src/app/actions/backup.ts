@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { dataChanged } from "@/lib/cache";
 import { categories, db, meals } from "@/db";
 import { deleteMealImage } from "@/lib/blob";
 import { backupSchema } from "@/lib/meal-input";
@@ -48,6 +49,7 @@ export async function importBackup(_prev: ImportState, formData: FormData): Prom
       existing.add(meal.name.trim().toLowerCase());
       added++;
     }
+    dataChanged();
     revalidatePath("/", "layout");
     return {
       message:
@@ -55,6 +57,7 @@ export async function importBackup(_prev: ImportState, formData: FormData): Prom
         (skipped ? ` Skipped ${skipped} meal${skipped === 1 ? "" : "s"} that already existed.` : ""),
     };
   } catch (e) {
+    dataChanged();
     console.error("Import failed", e);
     return { error: "The import failed part-way. Please try again." };
   }

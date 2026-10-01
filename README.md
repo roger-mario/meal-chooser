@@ -18,7 +18,7 @@ macros and micronutrients (vitamins, minerals, choline, omega-3 …).
    environment variables automatically.
 3. In **Settings → Environment Variables**, add:
    - `APP_TIMEZONE`, e.g. `Europe/Zurich` (used for dates and chat times)
-   - `APP_PASSWORD` (optional) to protect the site; the browser asks for it, any username works
+   - `APP_PASSWORD` (optional) to protect the site; it is asked once on a sign-in page and each device remembers it
    - `AI_MODEL` and `AI_GATEWAY_API_KEY` (optional) to turn on AI nutrition estimates. Without them,
      nutrition values are entered manually on each meal.
    - `API_KEY` (optional) to turn on the `/api/v1` endpoints for adding meals
@@ -35,6 +35,9 @@ npm run dev
 ```
 
 After changing `src/db/schema.ts`, run `npm run db:generate` to create a new migration.
+
+The app icon lives in `public/icon.svg`. After changing it, run `node scripts/make-icons.mjs` to update the PNG icons
+used by phones' home screens.
 
 ## Project layout
 

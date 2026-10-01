@@ -24,9 +24,8 @@ export const maxDuration = 120;
 
 export default async function MealPage({ params }: PageProps<"/meals/[id]">) {
   const { id } = await params;
-  const meal = await getMeal(Number(id));
+  const [meal, messages, me] = await Promise.all([getMeal(Number(id)), listComments(Number(id)), getCurrentUser()]);
   if (!meal) notFound();
-  const [messages, me] = await Promise.all([listComments(meal.id), getCurrentUser()]);
   const ai = aiAvailable();
 
   return (

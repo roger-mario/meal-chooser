@@ -19,7 +19,8 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
       <header className="sticky top-0 z-20 border-b border-stone-200 bg-white/90 pt-[env(safe-area-inset-top)] backdrop-blur">
         <div className="mx-auto flex h-14 max-w-5xl items-center gap-5 px-4 sm:h-16">
           <Link href="/" className="flex items-center gap-2 text-lg font-semibold tracking-tight text-stone-900">
-            <span className="text-2xl">🍲</span> Otao
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/icon.svg" alt="" width={28} height={28} className="h-7 w-7" /> Otao
           </Link>
           <nav className="hidden gap-1 text-sm whitespace-nowrap md:flex">
             {nav.map((n) => (

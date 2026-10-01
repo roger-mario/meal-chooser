@@ -2,6 +2,7 @@
 
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { dataChanged } from "@/lib/cache";
 import { categories, db } from "@/db";
 import { validEmoji } from "@/lib/emoji";
 
@@ -21,6 +22,7 @@ export async function createCategory(_prev: CategoryFormState, formData: FormDat
   if ("error" in data) return { error: data.error };
   const inserted = await db().insert(categories).values(data).onConflictDoNothing().returning();
   if (inserted.length === 0) return { error: "A category with this name already exists." };
+  dataChanged();
   revalidatePath("/", "layout");
   return { ok: true };
 }
@@ -37,11 +39,13 @@ export async function updateCategory(
   } catch {
     return { error: "A category with this name already exists." };
   }
+  dataChanged();
   revalidatePath("/", "layout");
   return { ok: true };
 }
 
 export async function deleteCategory(id: number) {
   await db().delete(categories).where(eq(categories.id, id));
+  dataChanged();
   revalidatePath("/", "layout");
 }

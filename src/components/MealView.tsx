@@ -23,7 +23,7 @@ export function MealView({
     <>
       {/* Edge to edge on phones, a card on bigger screens. */}
       <div className="card -mx-4 -mt-5 overflow-hidden rounded-none border-x-0 border-t-0 sm:mx-0 sm:mt-0 sm:rounded-xl sm:border md:grid md:grid-cols-2">
-        <MealImage src={meal.imageUrl} alt={meal.name} />
+        <MealImage src={meal.imageUrl} alt={meal.name} sizes="(min-width: 1024px) 512px, (min-width: 768px) 50vw, 100vw" preload />
         <div className="flex flex-col gap-3 p-4 sm:p-6">
           <div className="flex flex-wrap gap-1.5">
             {meal.categories.map((c) => (

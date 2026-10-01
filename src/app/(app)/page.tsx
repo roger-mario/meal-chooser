@@ -1,6 +1,10 @@
+import { sql } from "drizzle-orm";
 import Link from "next/link";
+import { after } from "next/server";
+import { db } from "@/db";
 import { CategoryFilter } from "@/components/CategoryFilter";
 import { MealCard } from "@/components/MealCard";
+import { RandomButton } from "@/components/RandomButton";
 import { SearchBox } from "@/components/SearchBox";
 import { SortSelect } from "@/components/SortSelect";
 import { formatDay, todayISO } from "@/lib/dates";
@@ -37,6 +41,8 @@ export default async function MealsPage({ searchParams }: PageProps<"/">) {
     getCurrentUser(),
   ]);
   const meals = sortMeals(found, sort);
+  // The lists above come from the cache. Wake the database now so opening a meal is quick too.
+  after(() => db().execute(sql`select 1`).catch(() => {}));
   const filtering = Boolean(query || categoryId || ingredient);
   // Keeps the other filters when removing the ingredient (or only its kind).
   const withoutIngredient = (keepIngredient: boolean) => {
@@ -64,14 +70,10 @@ export default async function MealsPage({ searchParams }: PageProps<"/">) {
             {me ? `, ${me.name}` : ""} 👋
           </h1>
         </div>
-        <Link
-          href={categoryId ? `/random?category=${categoryId}` : "/random"}
-          className="btn h-11 w-11 shrink-0 rounded-full p-0 text-xl sm:h-auto sm:w-auto sm:rounded-lg sm:px-3 sm:text-sm"
-          prefetch={false}
-          title="Surprise me"
-        >
-          🎲<span className="hidden sm:inline">Surprise me</span>
-        </Link>
+        <RandomButton
+          mealIds={meals.map((m) => m.id)}
+          fallbackHref={categoryId ? `/random?category=${categoryId}` : "/random"}
+        />
       </section>
 
       <section className="space-y-3">
@@ -140,9 +142,9 @@ export default async function MealsPage({ searchParams }: PageProps<"/">) {
           </div>
         ) : (
           <ul className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-3">
-            {meals.map((m) => (
+            {meals.map((m, i) => (
               <li key={m.id}>
-                <MealCard meal={m} comments={chats.get(m.id) ?? 0} />
+                <MealCard meal={m} comments={chats.get(m.id) ?? 0} preload={i < 4} />
               </li>
             ))}
             {!filtering && (

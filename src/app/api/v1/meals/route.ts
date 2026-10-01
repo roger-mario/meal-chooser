@@ -1,4 +1,5 @@
 import { revalidatePath } from "next/cache";
+import { dataChanged } from "@/lib/cache";
 import { z } from "zod";
 import { checkApiKey } from "@/lib/api-auth";
 import { createMealFromInput } from "@/lib/meal-store";
@@ -53,6 +54,7 @@ export async function POST(request: Request) {
     const id = await createMealFromInput(input);
     created.push({ id, name: input.name, url: `${origin}/meals/${id}` });
   }
+  dataChanged();
   revalidatePath("/", "layout");
   return Response.json({ created }, { status: 201 });
 }

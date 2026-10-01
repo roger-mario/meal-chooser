@@ -12,7 +12,7 @@ function shortDate(d: Date) {
 }
 
 /** A meal in the home grid. Every card has the same layout, whatever details the meal has. */
-export function MealCard({ meal, comments = 0 }: { meal: MealWithCategories; comments?: number }) {
+export function MealCard({ meal, comments = 0, preload = false }: { meal: MealWithCategories; comments?: number; preload?: boolean }) {
   const minutes = totalMinutes(meal);
   const price = costPerServing(meal.cost, meal.servings);
   const kcal = meal.nutrition?.perServing.calories;
@@ -26,7 +26,12 @@ export function MealCard({ meal, comments = 0 }: { meal: MealWithCategories; com
       className="card group flex h-full flex-col overflow-hidden transition hover:-translate-y-0.5 hover:shadow-lg"
     >
       <div className="relative">
-        <MealImage src={meal.imageUrl} alt={meal.name} className="transition duration-300 group-hover:scale-[1.03]" />
+        <MealImage
+          src={meal.imageUrl}
+          alt={meal.name}
+          preload={preload}
+          className="transition duration-300 group-hover:scale-[1.03]"
+        />
         <div className="absolute top-2 left-2 flex flex-wrap gap-1">
           {meal.babyFriendly && (
             <span className={pill} title="Baby-friendly">

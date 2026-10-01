@@ -11,8 +11,8 @@ export async function GET(_req: Request, ctx: RouteContext<"/api/images/[...path
   return new Response(result.stream, {
     headers: {
       "Content-Type": result.blob.contentType,
-      // Blob pathnames have a random suffix, so the content never changes.
-      "Cache-Control": "private, max-age=31536000, immutable",
+      // Blob pathnames have a random suffix, so the content never changes and Vercel's CDN can keep it.
+      "Cache-Control": "public, max-age=31536000, immutable",
     },
   });
 }

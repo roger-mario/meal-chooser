@@ -3,6 +3,7 @@
 import { randomBytes } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { dataChanged } from "@/lib/cache";
 import { after } from "next/server";
 import { redirect } from "next/navigation";
 import { db, mealCategories, meals } from "@/db";
@@ -106,6 +107,7 @@ export async function createMeal(_prev: FormState, formData: FormData): Promise<
   } catch (e) {
     return errorState(e);
   }
+  dataChanged();
   revalidatePath("/");
   redirect(`/meals/${id}`);
 }
@@ -132,6 +134,7 @@ export async function updateMeal(id: number, _prev: FormState, formData: FormDat
   } catch (e) {
     return errorState(e);
   }
+  dataChanged();
   revalidatePath("/", "layout");
   redirect(`/meals/${id}`);
 }
@@ -139,6 +142,7 @@ export async function updateMeal(id: number, _prev: FormState, formData: FormDat
 export async function deleteMeal(id: number) {
   const [existing] = await db().delete(meals).where(eq(meals.id, id)).returning();
   await deleteMealImage(existing?.imageUrl);
+  dataChanged();
   revalidatePath("/", "layout");
   redirect("/");
 }
@@ -164,6 +168,8 @@ export async function estimateMealNutrition(
         .update(meals)
         .set({ nutrition, nutritionEstimatedAt: new Date(), nutritionJobStartedAt: null })
         .where(eq(meals.id, id));
+      // The home page shows calories and prices.
+      dataChanged();
     } catch (e) {
       console.error("Nutrition estimate failed", e);
       await db()
@@ -172,6 +178,7 @@ export async function estimateMealNutrition(
         .where(eq(meals.id, id));
     }
   });
+  dataChanged();
   revalidatePath(`/meals/${id}`);
   return null;
 }
@@ -196,6 +203,7 @@ export async function saveManualNutrition(id: number, formData: FormData) {
     .update(meals)
     .set({ nutrition, nutritionEstimatedAt: nutrition ? new Date() : null })
     .where(eq(meals.id, id));
+  dataChanged();
   revalidatePath("/", "layout");
 }
 
@@ -214,6 +222,8 @@ export async function estimateMealCost(id: number, _prev: FormState): Promise<Fo
         .update(meals)
         .set({ cost, costEstimatedAt: new Date(), costJobStartedAt: null })
         .where(eq(meals.id, id));
+      // The home page shows calories and prices.
+      dataChanged();
     } catch (e) {
       console.error("Cost estimate failed", e);
       await db()
@@ -222,6 +232,7 @@ export async function estimateMealCost(id: number, _prev: FormState): Promise<Fo
         .where(eq(meals.id, id));
     }
   });
+  dataChanged();
   revalidatePath(`/meals/${id}`);
   return null;
 }
@@ -243,16 +254,19 @@ export async function saveManualCost(id: number, formData: FormData) {
     .update(meals)
     .set({ cost, costEstimatedAt: cost ? new Date() : null })
     .where(eq(meals.id, id));
+  dataChanged();
   revalidatePath("/", "layout");
 }
 
 export async function startSharing(id: number) {
   const token = randomBytes(12).toString("base64url");
   await db().update(meals).set({ shareToken: token }).where(eq(meals.id, id));
+  dataChanged();
   revalidatePath(`/meals/${id}`);
 }
 
 export async function stopSharing(id: number) {
   await db().update(meals).set({ shareToken: null }).where(eq(meals.id, id));
+  dataChanged();
   revalidatePath(`/meals/${id}`);
 }

@@ -1,5 +1,6 @@
 import "server-only";
 import { and, asc, desc, eq, exists, ilike, inArray, or, sql, type SQL } from "drizzle-orm";
+import { cached } from "./cache";
 import { categories, db, mealCategories, mealComments, meals, users, type Category, type Meal } from "@/db";
 import { normalizeIngredients, normalizeSteps, type Ingredient } from "./meal-fields";
 
@@ -76,7 +77,7 @@ function ingredientCondition(name: string, variant?: string): SQL {
 
 export type MealFilters = { categoryId?: number; q?: string; ingredient?: string; variant?: string };
 
-export async function listMeals(filters: MealFilters = {}): Promise<MealWithCategories[]> {
+async function queryMeals(filters: MealFilters = {}): Promise<MealWithCategories[]> {
   const conditions = [
     filters.categoryId
       ? exists(
@@ -96,15 +97,20 @@ export async function listMeals(filters: MealFilters = {}): Promise<MealWithCate
   return attachCategories(rows);
 }
 
+/** Straight from the database, for backups. */
+export const listMealsLive = queryMeals;
+export const listMeals = cached("meals", queryMeals);
+
+/** Always fresh: the meal page shows AI jobs and chat as they happen. */
 export async function getMeal(id: number): Promise<MealWithCategories | null> {
   if (!Number.isFinite(id)) return null;
   const rows = await selectMeals().where(eq(meals.id, id));
   return (await attachCategories(rows))[0] ?? null;
 }
 
-export async function listCategories(): Promise<Category[]> {
-  return db().select().from(categories).orderBy(asc(categories.name));
-}
+export const listCategories = cached("categories", async (): Promise<Category[]> =>
+  db().select().from(categories).orderBy(asc(categories.name)),
+);
 
 export async function getSharedMeal(token: string): Promise<MealWithCategories | null> {
   if (!/^[A-Za-z0-9_-]{16}$/.test(token)) return null;
@@ -115,6 +121,7 @@ export async function getSharedMeal(token: string): Promise<MealWithCategories |
 export type ChatMessage = { id: number; body: string; createdAt: Date; author: MealAuthor | null };
 
 export async function listComments(mealId: number): Promise<ChatMessage[]> {
+  if (!Number.isFinite(mealId)) return [];
   const rows = await db()
     .select({
       id: mealComments.id,
@@ -130,19 +137,23 @@ export async function listComments(mealId: number): Promise<ChatMessage[]> {
 }
 
 /** Number of meals in each category, for the filter chips. */
-export async function categoryCounts(): Promise<Map<number, number>> {
-  const rows = await db()
+const categoryCountRows = cached("category-counts", async () =>
+  db()
     .select({ categoryId: mealCategories.categoryId, n: sql<number>`count(*)::int` })
     .from(mealCategories)
-    .groupBy(mealCategories.categoryId);
-  return new Map(rows.map((r) => [r.categoryId, r.n]));
+    .groupBy(mealCategories.categoryId),
+);
+export async function categoryCounts(): Promise<Map<number, number>> {
+  return new Map((await categoryCountRows()).map((r) => [r.categoryId, r.n]));
 }
 
 /** Number of chat messages per meal. */
-export async function commentCounts(): Promise<Map<number, number>> {
-  const rows = await db()
+const commentCountRows = cached("comment-counts", async () =>
+  db()
     .select({ mealId: mealComments.mealId, n: sql<number>`count(*)::int` })
     .from(mealComments)
-    .groupBy(mealComments.mealId);
-  return new Map(rows.map((r) => [r.mealId, r.n]));
+    .groupBy(mealComments.mealId),
+);
+export async function commentCounts(): Promise<Map<number, number>> {
+  return new Map((await commentCountRows()).map((r) => [r.mealId, r.n]));
 }

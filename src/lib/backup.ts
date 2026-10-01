@@ -2,13 +2,13 @@ import "server-only";
 import { asc } from "drizzle-orm";
 import { categories, db } from "@/db";
 import { BACKUP_APP, type Backup } from "./meal-input";
-import { listMeals } from "./queries";
+import { listMealsLive } from "./queries";
 
 /** Everything except photos and chat messages. */
 export async function buildBackup(): Promise<Backup> {
   const [cats, meals] = await Promise.all([
     db().select().from(categories).orderBy(asc(categories.name)),
-    listMeals(),
+    listMealsLive(),
   ]);
   return {
     app: BACKUP_APP,
