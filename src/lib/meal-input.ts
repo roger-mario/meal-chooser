@@ -20,6 +20,8 @@ export const mealInputSchema = z.object({
   links: z.array(z.unknown()).max(50).optional(),
   /** Category names; missing categories are created. */
   categories: z.array(z.string().trim().min(1).max(100)).max(50).optional(),
+  /** Optional https link to a JPEG/PNG/WebP photo; it is downloaded and stored with the meal. */
+  imageUrl: z.url({ protocol: /^https$/ }).max(2000).nullish(),
   nutrition: z.record(z.string(), z.unknown()).nullish(),
   cost: z.record(z.string(), z.unknown()).nullish(),
 });

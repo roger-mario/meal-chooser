@@ -58,6 +58,22 @@ export async function uploadMealImage(file: File): Promise<string> {
   }
 }
 
+/** Downloads a photo from an https link and stores it like an uploaded one. */
+export async function importMealImage(url: string): Promise<string> {
+  let res: Response;
+  try {
+    res = await fetch(url, { redirect: "follow", signal: AbortSignal.timeout(15_000) });
+  } catch {
+    throw new ImageUploadError("The photo could not be downloaded.");
+  }
+  if (!res.ok) throw new ImageUploadError(`The photo could not be downloaded (HTTP ${res.status}).`);
+  if (Number(res.headers.get("content-length") ?? 0) > MAX_IMAGE_BYTES) {
+    throw new ImageUploadError("The photo is too large (max 3 MB).");
+  }
+  const bytes = await res.arrayBuffer();
+  return uploadMealImage(new File([bytes], "photo"));
+}
+
 export async function deleteMealImage(url: string | null | undefined) {
   if (!url) return;
   const target = url.startsWith(PRIVATE_PREFIX) ? url.slice(PRIVATE_PREFIX.length) : url;

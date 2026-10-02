@@ -1,6 +1,7 @@
 import "server-only";
 import { inArray, sql } from "drizzle-orm";
 import { categories, db, mealCategories, meals } from "@/db";
+import { importMealImage } from "./blob";
 import type { CostEstimate } from "./cost";
 import { validEmoji } from "./emoji";
 import { sanitizeIngredients, sanitizeLinks, type Diet, type Difficulty } from "./meal-fields";
@@ -33,11 +34,19 @@ export async function ensureCategories(
 
 export async function createMealFromInput(input: MealInput, categoryIds?: Map<string, number>) {
   const ids = categoryIds ?? (await ensureCategories(input.categories ?? []));
+  // A photo that can't be fetched shouldn't lose the whole meal.
+  const imageUrl = input.imageUrl
+    ? await importMealImage(input.imageUrl).catch((e) => {
+        console.error("Meal photo import failed", input.imageUrl, e);
+        return null;
+      })
+    : null;
   const [meal] = await db()
     .insert(meals)
     .values({
       name: input.name.trim(),
       description: input.description?.trim() || null,
+      imageUrl,
       servings: input.servings ?? 2,
       prepMinutes: input.prepMinutes || null,
       cookMinutes: input.cookMinutes || null,
