@@ -24,7 +24,7 @@ const costSchema = z.object({
 // Regular (not promotional) Migros shelf prices for the standard line, as anchors so estimates
 // don't drift. Approximate, autumn 2026; update when they change noticeably.
 const REFERENCE_PRICES = [
-  "Meat and fish (Swiss unless noted): chicken breast 32/kg, chicken thighs 20/kg, whole chicken 12/kg, minced beef 21/kg,",
+  "Meat and fish (Swiss unless noted): chicken breast (Swiss, pre-cut) 22/kg, chicken thighs 18/kg, whole chicken 12/kg, minced beef 21/kg,",
   "minced beef light 24/kg, minced turkey 22/kg, beef steak 55/kg, pork escalope 30/kg, cooked ham 30/kg,",
   "salmon fillet (farmed, Norway) 38/kg, smoked salmon 60/kg, tuna can (drained) 20/kg, turkey pepperoni 35/kg.",
   "Dairy and eggs: Swiss free-range eggs 0.60/piece, milk 1.80/l, kefir 3.80/l, natural yoghurt 3.50/kg, Greek yoghurt 7/kg,",
