@@ -50,6 +50,13 @@
       "when": 1791369672416,
       "tag": "0006_login_failures",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1791382714328,
+      "tag": "0007_labs_meal_log",
+      "breakpoints": true
     }
   ]
 }

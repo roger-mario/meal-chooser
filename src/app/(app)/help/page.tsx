@@ -156,7 +156,9 @@ export default async function HelpPage() {
           Units: g, kg, ml, l, pcs, tsp, tbsp, cup, clove, slice, can, bunch, pinch, &quot;to taste&quot;. Difficulty:
           easy, medium, hard. Diet: vegetarian, vegan. Also available:{" "}
           <code>GET /api/v1/meals</code> (optionally <code>?q=chicken</code> or{" "}
-          <code>?ingredient=rice&amp;variant=jasmine</code>) and <code>GET /api/v1/categories</code>. An ingredient&apos;s{" "}
+          <code>?ingredient=rice&amp;variant=jasmine</code>), <code>GET /api/v1/meals/ID</code> for one meal with all its
+          details, <code>POST /api/v1/meals/ID/estimate</code> to start new AI estimates, and{" "}
+          <code>GET /api/v1/categories</code>. An ingredient&apos;s{" "}
           <code>variant</code> is its kind (breast, jasmine) and <code>quantityMax</code> the top of a range.
         </p>
       </Section>
@@ -171,6 +173,26 @@ export default async function HelpPage() {
           <code className="rounded bg-stone-100 px-1 break-all">AI_MODEL</code> and{" "}
           <code className="rounded bg-stone-100 px-1 break-all">AI_GATEWAY_API_KEY</code> in Vercel&apos;s environment
           variables and redeploy.
+        </p>
+        <p>
+          Nutrition and prices are always <b>per portion</b>. The AI looks up values per 100 g for each ingredient (rice
+          and pasta dry, meat raw) and Otao does the maths, including vitamin losses from cooking. Prices assume regular
+          Migros prices for the standard line with Swiss meat; promotions and M-Budget are cheaper. When you change the
+          ingredients or servings, the meal shows that the estimate is outdated.
+        </p>
+        <p>
+          The <b>Otao score</b> (0–100) rates one serving: protein, fibre, plant variety, omega-3 and vitamins and minerals
+          the dish is rich in for its calories earn points; lots of salt, saturated fat, added sugar and ultra-processed
+          ingredients cost points. Badges like 💪 Protein-rich or 🧂 Salty show the highlights.
+        </p>
+      </Section>
+
+      <Section id="labs" title="🧪 Labs">
+        <p>
+          Experiments to try before they become part of Otao: logging what you eat with a dinner suggestion that fills
+          what&apos;s missing today, a week autopilot with a weekly nutrition check, and one shopping list for several
+          meals. Open them from your name at the top right → <b>Labs</b>. Labs never changes your meals, and what you log
+          there isn&apos;t part of backups yet.
         </p>
       </Section>
 

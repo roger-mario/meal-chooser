@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRef, useTransition } from "react";
 import { switchUser } from "@/app/actions/users";
 import { Avatar } from "./Avatar";
@@ -38,6 +39,16 @@ export function UserMenu({ users, current }: { users: Person[]; current: Person 
             {current?.id === u.id && <span className="text-emerald-700">✓</span>}
           </button>
         ))}
+        <div className="my-1 border-t border-stone-100" />
+        <Link
+          href="/labs"
+          onClick={() => ref.current?.removeAttribute("open")}
+          className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 hover:bg-stone-100"
+        >
+          <span className="flex h-6 w-6 items-center justify-center">🧪</span>
+          <span className="flex-1">Labs</span>
+          <span className="rounded-full bg-violet-100 px-1.5 text-[10px] font-medium text-violet-800">new</span>
+        </Link>
       </div>
     </details>
   );

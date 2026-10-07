@@ -25,3 +25,8 @@ export function formatDay(iso: string, opts: Intl.DateTimeFormatOptions = {}) {
     ...opts,
   });
 }
+
+/** The hour (0–23) in the app's time zone. */
+export function currentHour(): number {
+  return Number(new Intl.DateTimeFormat("en-GB", { hour: "numeric", hour12: false, timeZone: TIME_ZONE }).format(new Date())) % 24;
+}

@@ -18,7 +18,9 @@ import { COST_STORE } from "@/lib/cost";
 import { aiAvailable } from "@/lib/nutrients";
 import { MealChat } from "@/components/MealChat";
 import { getMeal, listComments } from "@/lib/queries";
-import { TIME_ZONE } from "@/lib/dates";
+import { currentHour, TIME_ZONE, todayISO } from "@/lib/dates";
+import { labsEnabled } from "@/lib/labs-queries";
+import { AteThisButton } from "@/components/labs/AteThisButton";
 import { getCurrentUser } from "@/lib/users";
 
 export const dynamic = "force-dynamic";
@@ -36,7 +38,12 @@ function OutdatedNote() {
 
 export default async function MealPage({ params }: PageProps<"/meals/[id]">) {
   const { id } = await params;
-  const [meal, messages, me] = await Promise.all([getMeal(Number(id)), listComments(Number(id)), getCurrentUser()]);
+  const [meal, messages, me, labs] = await Promise.all([
+    getMeal(Number(id)),
+    listComments(Number(id)),
+    getCurrentUser(),
+    labsEnabled(),
+  ]);
   if (!meal) notFound();
   const ai = aiAvailable();
 
@@ -54,6 +61,7 @@ export default async function MealPage({ params }: PageProps<"/meals/[id]">) {
             {bringLines(meal.ingredients).length > 0 && (
               <BringButton token={bringToken(meal.id)} servings={meal.servings} />
             )}
+            {labs && me && <AteThisButton mealId={meal.id} day={todayISO()} hour={currentHour()} />}
           </>
         }
       />

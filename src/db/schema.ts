@@ -5,6 +5,7 @@ import {
   jsonb,
   pgTable,
   primaryKey,
+  real,
   serial,
   text,
   timestamp,
@@ -101,3 +102,28 @@ export const loginFailures = pgTable("login_failures", {
   count: integer("count").notNull().default(0),
   windowStart: timestamp("window_start", { withTimezone: true }).notNull().defaultNow(),
 });
+
+/**
+ * Labs: what someone ate (or the household plans to eat) on a day. A row points at a saved meal,
+ * or carries a free-text label for anything else. Planned rows are the week plan's dinners.
+ */
+export const mealLog = pgTable(
+  "meal_log",
+  {
+    id: serial("id").primaryKey(),
+    /** ISO date "YYYY-MM-DD" in the app's time zone. */
+    day: text("day").notNull(),
+    slot: text("slot").$type<MealSlot>().notNull(),
+    /** Who ate it; null for the household's planned dinners. */
+    userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }),
+    mealId: integer("meal_id").references(() => meals.id, { onDelete: "cascade" }),
+    label: text("label"),
+    portions: real("portions").notNull().default(1),
+    planned: boolean("planned").notNull().default(false),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("meal_log_day_idx").on(t.day)],
+);
+
+export type MealSlot = "breakfast" | "lunch" | "dinner" | "snack";
+export type MealLogEntry = typeof mealLog.$inferSelect;
