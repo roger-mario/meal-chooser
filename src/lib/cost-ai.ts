@@ -33,10 +33,11 @@ const REFERENCE_PRICES = [
   "red lentils 5/kg, canned chickpeas/beans (drained) 4/kg, passata/tomato sauce 2.60/kg, pesto/arrabbiata sauce 10/kg,",
   "canned corn (drained) 6/kg, olive oil 12/l, sunflower oil 4.50/l, whey protein 40/kg, chia seeds 16/kg, flax seeds 6/kg,",
   "walnuts 28/kg, almonds 20/kg, dark chocolate 15/kg, honey 15/kg, spices about 40/kg.",
-  "Produce: carrots 2.60/kg, onions 2.40/kg, potatoes 2.20/kg, bell peppers 7/kg (about 1/piece), tomatoes 4.50/kg,",
-  "cherry tomatoes 9/kg, mushrooms 11/kg, broccoli 6/kg, broccolini 18/kg, zucchini 5/kg, spinach 12/kg,",
-  "spring onions 1.60/bunch, bananas 2.90/kg, apples 4/kg, fresh blueberries 22/kg, frozen berries 9/kg,",
-  "frozen peas 4/kg, frozen mixed vegetables 4.50/kg, avocado 1.50/piece, lemons 0.60/piece.",
+  "Produce per kg: carrots 2.60/kg, onions 2.40/kg, potatoes 2.20/kg, tomatoes 4.50/kg, cherry tomatoes 9/kg,",
+  "mushrooms 11/kg, broccoli 6/kg, broccolini 18/kg, zucchini 5/kg, spinach 12/kg, bananas 2.90/kg, apples 4/kg,",
+  "fresh blueberries 22/kg, frozen berries 9/kg, frozen peas 4/kg, frozen mixed vegetables 4.50/kg.",
+  "Produce per piece: bell pepper 1.00/piece, onion 0.30/piece, carrot 0.20/piece, spring onion 0.30/piece (a bunch of",
+  "about 6 is 1.60), garlic clove 0.10/piece, avocado 1.50/piece, lemon 0.60/piece, chili pepper 0.40/piece.",
 ].join("\n");
 
 export async function estimateCost(meal: Meal): Promise<CostEstimate> {
@@ -55,7 +56,8 @@ export async function estimateCost(meal: Meal): Promise<CostEstimate> {
     REFERENCE_PRICES,
     "Use these where they fit; for anything else give the typical regular price of a comparable product.",
     "",
-    "For every ingredient give the shelf price per kg, litre or piece and the amount the recipe uses in that unit,",
+    "For every ingredient give the shelf price for ONE kg, ONE litre or ONE piece (never a per-kg price with unit",
+    "'piece') and the amount the recipe uses in that unit,",
     "pro-rated (only what the recipe uses, not the whole pack). Convert kitchen units first: 1 cup dry rice ≈ 0.185 kg,",
     "1 cup oats ≈ 0.08 kg, 1 tbsp oil ≈ 0.013 l, 1 tsp spice ≈ 0.0025 kg, 1 can ≈ 0.4 kg.",
     "Where no quantity is given, assume a typical amount for this recipe. For a range like 600–700 g, use the midpoint.",
