@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { CostPanel } from "@/components/CostPanel";
 import { MealView } from "@/components/MealView";
 import { NutritionPanel } from "@/components/NutritionPanel";
+import { HealthSummary } from "@/components/HealthSummary";
 import { getSharedMeal } from "@/lib/queries";
 
 export const dynamic = "force-dynamic";
@@ -43,6 +44,7 @@ export default async function SharedMealPage({ params }: PageProps<"/s/[token]">
         {meal.nutrition && (
           <section className="card space-y-4 p-4 sm:p-6">
             <h2 className="text-lg font-semibold">🥗 Nutrition per serving</h2>
+            <HealthSummary nutrition={meal.nutrition} />
             <NutritionPanel nutrition={meal.nutrition} />
           </section>
         )}

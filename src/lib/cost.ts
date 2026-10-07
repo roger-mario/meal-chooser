@@ -2,7 +2,14 @@ export type CostItem = {
   name: string;
   /** Price in CHF for the amount the recipe uses (not the whole pack). */
   chf: number;
+  /** AI estimates: the product assumed and how the price was worked out (amount × shelf price). */
+  product?: string;
+  amount?: number;
+  unit?: PriceUnit;
+  unitPrice?: number;
 };
+
+export type PriceUnit = "kg" | "l" | "piece";
 
 export type CostEstimate = {
   store: string;
@@ -11,6 +18,8 @@ export type CostEstimate = {
   source: "ai" | "manual";
   notes?: string;
   model?: string;
+  /** Fingerprint of the servings and ingredients the estimate was made for; see estimateBasis(). */
+  basis?: string;
 };
 
 export const COST_STORE = "Migros";

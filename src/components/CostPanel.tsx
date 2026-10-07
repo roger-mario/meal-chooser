@@ -1,5 +1,11 @@
 // Display only: the share page uses this, so it must not import server actions (see CostForm).
-import { costPerServing, costTotal, formatChf, type CostEstimate } from "@/lib/cost";
+import { costPerServing, costTotal, formatChf, type CostEstimate, type PriceUnit } from "@/lib/cost";
+
+function formatAmount(amount: number, unit: PriceUnit) {
+  if (unit === "piece") return `${Math.round(amount * 10) / 10} pc`;
+  if (amount < 1) return `${Math.round(amount * 1000)} ${unit === "kg" ? "g" : "ml"}`;
+  return `${Math.round(amount * 100) / 100} ${unit}`;
+}
 
 export function CostPanel({ cost, servings }: { cost: CostEstimate; servings: number }) {
   const total = costTotal(cost);
@@ -21,8 +27,15 @@ export function CostPanel({ cost, servings }: { cost: CostEstimate; servings: nu
       <table className="w-full text-sm">
         <tbody>
           {cost.items.map((i, idx) => (
-            <tr key={idx} className="border-t border-stone-100">
-              <td className="py-1.5">{i.name}</td>
+            <tr key={idx} className="border-t border-stone-100 align-top">
+              <td className="py-1.5">
+                {i.name}
+                {i.product && i.unitPrice != null && i.amount != null && i.unit && (
+                  <span className="block text-xs text-stone-500">
+                    {i.product} · {formatAmount(i.amount, i.unit)} × {i.unitPrice.toFixed(2)}/{i.unit === "piece" ? "pc" : i.unit}
+                  </span>
+                )}
+              </td>
               <td className="py-1.5 text-right tabular-nums">{i.chf.toFixed(2)}</td>
             </tr>
           ))}
@@ -30,8 +43,10 @@ export function CostPanel({ cost, servings }: { cost: CostEstimate; servings: nu
       </table>
       {cost.notes && <p className="text-sm text-stone-600">{cost.notes}</p>}
       <p className="text-xs text-stone-400">
-        {cost.source === "manual" ? "Entered manually" : `AI estimate of ${cost.store} prices`}. Prices for the
-        amount used, in CHF.
+        {cost.source === "manual"
+          ? "Entered manually. "
+          : `AI estimate of regular ${cost.store} prices (standard line, Swiss meat; promotions and M-Budget are cheaper). `}
+        Prices for the amount used, in CHF.
       </p>
     </div>
   );

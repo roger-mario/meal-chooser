@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { costPerServing, formatChf } from "@/lib/cost";
+import { mealHealth, scoreColor } from "@/lib/health";
 import { DIETS, DIFFICULTIES, formatMinutes, totalMinutes } from "@/lib/meal-fields";
 import type { MealWithCategories } from "@/lib/queries";
 import { Avatar } from "./Avatar";
@@ -16,6 +17,7 @@ export function MealCard({ meal, comments = 0, preload = false }: { meal: MealWi
   const minutes = totalMinutes(meal);
   const price = costPerServing(meal.cost, meal.servings);
   const kcal = meal.nutrition?.perServing.calories;
+  const health = mealHealth(meal.nutrition);
   const diet = DIETS.find((d) => d.value === meal.diet);
   const difficulty = DIFFICULTIES.find((d) => d.value === meal.difficulty);
   const pill = "rounded-full bg-white/90 px-2 py-0.5 text-xs font-medium text-stone-800 shadow-sm backdrop-blur";
@@ -52,6 +54,14 @@ export function MealCard({ meal, comments = 0, preload = false }: { meal: MealWi
           </span>
         )}
         {minutes && <span className={`absolute bottom-2 left-2 ${pill}`}>⏱ {formatMinutes(minutes)}</span>}
+        {health && (
+          <span
+            className={`absolute right-2 bottom-2 rounded-full px-2 py-0.5 text-xs font-semibold shadow-sm ${scoreColor(health.score)}`}
+            title={`Otao score ${health.score}/100 (${health.label})`}
+          >
+            ♥ {health.score}
+          </span>
+        )}
       </div>
 
       <div className="flex flex-1 flex-col gap-1.5 p-3 sm:p-4">
@@ -63,6 +73,13 @@ export function MealCard({ meal, comments = 0, preload = false }: { meal: MealWi
             </span>
           )}
           {kcal != null && <span>🔥 {Math.round(kcal)} kcal</span>}
+          {health && health.badges.length > 0 && (
+            <span className="flex gap-0.5" title={health.badges.map((b) => b.label).join(", ")}>
+              {health.badges.map((b) => (
+                <span key={b.key}>{b.emoji}</span>
+              ))}
+            </span>
+          )}
           {meal.categories.length > 0 && (
             <span className="flex gap-0.5" title={meal.categories.map((c) => c.name).join(", ")}>
               {meal.categories.map((c) => (

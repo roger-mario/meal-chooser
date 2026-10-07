@@ -4,16 +4,13 @@ import { randomBytes } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { dataChanged } from "@/lib/cache";
-import { after } from "next/server";
 import { redirect } from "next/navigation";
 import { db, mealCategories, meals } from "@/db";
-import { aiAvailable, NUTRIENTS, type NutritionEstimate } from "@/lib/nutrients";
+import { NUTRIENTS, type NutritionEstimate } from "@/lib/nutrients";
 import { COST_STORE, type CostEstimate, type CostItem } from "@/lib/cost";
-import { estimateCost } from "@/lib/cost-ai";
-import { aiErrorMessage, isRunning } from "@/lib/ai-errors";
+import { startCostJob, startNutritionJob } from "@/lib/estimate-jobs";
 import { deleteMealImage, ImageUploadError, uploadMealImage } from "@/lib/blob";
 import { DIETS, DIFFICULTIES, sanitizeIngredients, sanitizeLinks, type Ingredient, type MealLink } from "@/lib/meal-fields";
-import { estimateNutrition } from "@/lib/nutrition-ai";
 import { getCurrentUser } from "@/lib/users";
 import { requireSite } from "@/lib/require-site";
 
@@ -151,41 +148,15 @@ export async function deleteMeal(id: number) {
   redirect("/");
 }
 
-/**
- * Starts the AI nutrition estimate in the background and returns at once.
- * The page shows a status while `nutritionJobStartedAt` is set and refreshes until it's done.
- */
+/** Starts the AI nutrition estimate in the background and returns at once. */
 export async function estimateMealNutrition(
   id: number,
   _prev: { error?: string } | null,
 ): Promise<{ error?: string } | null> {
   await requireSite();
-  const [meal] = await db().select().from(meals).where(eq(meals.id, id));
-  if (!meal) return { error: "Meal not found" };
-  if (!aiAvailable()) return { error: "AI estimates are not set up. Enter the values manually below." };
-  if (meal.ingredients.length === 0) return { error: "Add ingredients to the meal first." };
-  if (isRunning(meal.nutritionJobStartedAt)) return null;
-  await db().update(meals).set({ nutritionJobStartedAt: new Date(), nutritionJobError: null }).where(eq(meals.id, id));
-  after(async () => {
-    try {
-      const nutrition = await estimateNutrition(meal);
-      await db()
-        .update(meals)
-        .set({ nutrition, nutritionEstimatedAt: new Date(), nutritionJobStartedAt: null })
-        .where(eq(meals.id, id));
-      // The home page shows calories and prices.
-      dataChanged();
-    } catch (e) {
-      console.error("Nutrition estimate failed", e);
-      await db()
-        .update(meals)
-        .set({ nutritionJobStartedAt: null, nutritionJobError: aiErrorMessage(e) })
-        .where(eq(meals.id, id));
-    }
-  });
-  dataChanged();
+  const error = await startNutritionJob(id);
   revalidatePath(`/meals/${id}`);
-  return null;
+  return error ? { error } : null;
 }
 
 export async function saveManualNutrition(id: number, formData: FormData) {
@@ -216,32 +187,9 @@ export async function saveManualNutrition(id: number, formData: FormData) {
 /** Starts the AI price estimate in the background; see estimateMealNutrition. */
 export async function estimateMealCost(id: number, _prev: FormState): Promise<FormState> {
   await requireSite();
-  const [meal] = await db().select().from(meals).where(eq(meals.id, id));
-  if (!meal) return { error: "Meal not found" };
-  if (!aiAvailable()) return { error: "AI estimates are not set up. Enter the prices manually below." };
-  if (meal.ingredients.length === 0) return { error: "Add ingredients to the meal first." };
-  if (isRunning(meal.costJobStartedAt)) return null;
-  await db().update(meals).set({ costJobStartedAt: new Date(), costJobError: null }).where(eq(meals.id, id));
-  after(async () => {
-    try {
-      const cost = await estimateCost(meal);
-      await db()
-        .update(meals)
-        .set({ cost, costEstimatedAt: new Date(), costJobStartedAt: null })
-        .where(eq(meals.id, id));
-      // The home page shows calories and prices.
-      dataChanged();
-    } catch (e) {
-      console.error("Cost estimate failed", e);
-      await db()
-        .update(meals)
-        .set({ costJobStartedAt: null, costJobError: aiErrorMessage(e) })
-        .where(eq(meals.id, id));
-    }
-  });
-  dataChanged();
+  const error = await startCostJob(id);
   revalidatePath(`/meals/${id}`);
-  return null;
+  return error ? { error } : null;
 }
 
 export async function saveManualCost(id: number, formData: FormData) {

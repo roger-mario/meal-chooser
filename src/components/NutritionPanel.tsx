@@ -1,4 +1,4 @@
-import { NUTRIENT_GROUPS, NUTRIENTS, type NutrientDef, type NutritionEstimate } from "@/lib/nutrients";
+import { NUTRIENTS, POORLY_TABULATED, type NutrientDef, type NutritionEstimate } from "@/lib/nutrients";
 
 function fmt(value: number | undefined, unit: string) {
   if (value == null) return "–";
@@ -6,8 +6,12 @@ function fmt(value: number | undefined, unit: string) {
   return `${value.toFixed(digits)} ${unit}`;
 }
 
-/** Nutrients that are shown when they reach this share of the daily value in one serving. */
-const RELEVANT_PCT = 10;
+/** Nutrients listed when one serving gives at least this share of the daily value ("excellent source"). */
+const RICH_PCT = 20;
+/** Named in one line below the list ("good source"); anything less isn't shown. */
+const GOOD_PCT = 10;
+/** Nutrients to limit are flagged when one serving uses this much of the day's budget (a third of the day). */
+const WATCH_PCT = 30;
 // Shown on their own at the top.
 const HEADLINE = new Set(["calories", "protein", "carbohydrates", "fat"]);
 // Worth knowing when high, even though they aren't "good" nutrients.
@@ -48,19 +52,20 @@ export function NutritionPanel({ nutrition }: { nutrition: NutritionEstimate }) 
   ].map((h) => ({ ...h, value: h.value == null ? "–" : Math.round(h.value).toString() }));
   const assumptions = nutrition.assumptions ?? [];
 
-  const rows: Row[] = NUTRIENTS.filter((n) => !HEADLINE.has(n.key)).map((def) => {
+  const rows: Row[] = NUTRIENTS.filter((n) => !HEADLINE.has(n.key) && !POORLY_TABULATED.has(n.key)).map((def) => {
     const value = perServing[def.key];
     const dv = "dailyValue" in def ? def.dailyValue : undefined;
     return { def, value, pct: dv && value != null ? Math.round((value / dv) * 100) : null };
   });
-  // The nutrients this dish actually contributes, biggest first.
+  // Only what this dish really contributes, biggest first. Small amounts of common nutrients are left out.
   const key = rows
-    .filter((r) => r.pct !== null && r.pct >= RELEVANT_PCT && !LIMIT.has(r.def.key))
+    .filter((r) => r.pct !== null && r.pct >= RICH_PCT && !LIMIT.has(r.def.key))
     .sort((a, b) => b.pct! - a.pct!);
-  const watch = rows.filter((r) => LIMIT.has(r.def.key) && r.pct !== null && r.pct >= RELEVANT_PCT);
+  const good = rows
+    .filter((r) => r.pct !== null && r.pct >= GOOD_PCT && r.pct < RICH_PCT && !LIMIT.has(r.def.key))
+    .sort((a, b) => b.pct! - a.pct!);
+  const watch = rows.filter((r) => LIMIT.has(r.def.key) && r.pct !== null && r.pct >= WATCH_PCT);
   const fiber = rows.find((r) => r.def.key === "fiber");
-  const shown = new Set([...key, ...watch].map((r) => r.def.key));
-  const rest = rows.filter((r) => !shown.has(r.def.key) && r.value != null);
 
   return (
     <div className="space-y-5">
@@ -79,7 +84,7 @@ export function NutritionPanel({ nutrition }: { nutrition: NutritionEstimate }) 
       {nutrition.summary && <p className="text-sm text-stone-600">{nutrition.summary}</p>}
 
       <div>
-        <h3 className="mb-1 text-sm font-semibold text-stone-700">Rich in</h3>
+        <h3 className="mb-1 text-sm font-semibold text-stone-700">Rich in <span className="font-normal text-stone-400">(20%+ of the daily value)</span></h3>
         {key.length ? (
           <table className="w-full text-sm">
             <tbody>
@@ -90,8 +95,20 @@ export function NutritionPanel({ nutrition }: { nutrition: NutritionEstimate }) 
           </table>
         ) : (
           <p className="text-sm text-stone-500">
-            No vitamin or mineral reaches {RELEVANT_PCT}% of the daily value in one serving
+            No vitamin or mineral reaches {RICH_PCT}% of the daily value in one serving
             {fiber?.value != null ? ` (fiber: ${fmt(fiber.value, "g")})` : ""}.
+          </p>
+        )}
+        {good.length > 0 && (
+          <p className="mt-2 text-xs text-stone-500">
+            Also a good source of{" "}
+            {good.map((r, i) => (
+              <span key={r.def.key}>
+                {i > 0 && ", "}
+                {r.def.label.replace(/ \(.*\)$/, "")} <span className="tabular-nums">{r.pct}%</span>
+              </span>
+            ))}
+            .
           </p>
         )}
       </div>
@@ -107,32 +124,6 @@ export function NutritionPanel({ nutrition }: { nutrition: NutritionEstimate }) 
             </tbody>
           </table>
         </div>
-      )}
-
-      {rest.length > 0 && (
-        <details className="group text-sm">
-          <summary className="cursor-pointer font-medium text-stone-600 hover:text-stone-900">
-            All other nutrients ({rest.length})
-          </summary>
-          <div className="mt-2 space-y-3">
-            {NUTRIENT_GROUPS.filter((g) => g.group !== "energy").map((g) => {
-              const inGroup = rest.filter((r) => r.def.group === g.group);
-              if (!inGroup.length) return null;
-              return (
-                <div key={g.group}>
-                  <h4 className="mb-1 text-xs font-semibold tracking-wide text-stone-500 uppercase">{g.label}</h4>
-                  <table className="w-full text-sm">
-                    <tbody>
-                      {inGroup.map((r) => (
-                        <NutrientRow key={r.def.key} {...r} />
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              );
-            })}
-          </div>
-        </details>
       )}
 
       {(nutrition.ingredients?.length || assumptions.length > 0) && (

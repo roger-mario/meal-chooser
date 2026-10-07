@@ -9,6 +9,8 @@ import { EstimateButton } from "@/components/EstimateButton";
 import { MealView } from "@/components/MealView";
 import { NutritionForm } from "@/components/NutritionForm";
 import { NutritionPanel } from "@/components/NutritionPanel";
+import { HealthSummary } from "@/components/HealthSummary";
+import { isOutdated } from "@/lib/estimate-basis";
 import { ShareButton } from "@/components/ShareButton";
 import { bringLines, bringToken } from "@/lib/bring";
 import { jobStatus } from "@/lib/ai-errors";
@@ -22,6 +24,15 @@ import { getCurrentUser } from "@/lib/users";
 export const dynamic = "force-dynamic";
 // AI estimates can take a while.
 export const maxDuration = 120;
+
+function OutdatedNote() {
+  return (
+    <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900">
+      ⚠️ The ingredients or servings changed since this estimate, or it was made with an older, less accurate method.
+      Estimate again for up-to-date values.
+    </p>
+  );
+}
 
 export default async function MealPage({ params }: PageProps<"/meals/[id]">) {
   const { id } = await params;
@@ -60,6 +71,7 @@ export default async function MealPage({ params }: PageProps<"/meals/[id]">) {
             />
           )}
         </div>
+        {isOutdated(meal.cost, meal) && <OutdatedNote />}
         {meal.cost && meal.cost.items.length > 0 ? (
           <CostPanel cost={meal.cost} servings={meal.servings} />
         ) : (
@@ -85,6 +97,8 @@ export default async function MealPage({ params }: PageProps<"/meals/[id]">) {
             />
           )}
         </div>
+        {isOutdated(meal.nutrition, meal) && <OutdatedNote />}
+        {meal.nutrition && <HealthSummary nutrition={meal.nutrition} />}
         {meal.nutrition ? (
           <NutritionPanel nutrition={meal.nutrition} />
         ) : (

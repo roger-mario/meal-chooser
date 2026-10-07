@@ -81,9 +81,21 @@ export type NutritionEstimate = {
   summary?: string;
   assumptions?: string[];
   model?: string;
-  /** AI estimates: how much of each ingredient the whole recipe uses, the basis of the calculation. */
-  ingredients?: { name: string; grams: number }[];
+  /**
+   * AI estimates: how much of each ingredient the whole recipe uses, the basis of the calculation.
+   * `plant` and `processing` feed the health score (plant variety, ultra-processed foods).
+   */
+  ingredients?: { name: string; grams: number; plant?: boolean; processing?: Processing }[];
+  /** Fingerprint of the servings and ingredients the estimate was made for; see estimateBasis(). */
+  basis?: string;
 };
+
+/** NOVA-style level: whole foods, processed (cheese, bread, canned) or ultra-processed (sausages, sweets). */
+export type Processing = "whole" | "processed" | "ultra";
+
+// Food tables barely cover these, so estimates of them are guesses: the AI doesn't estimate them
+// and they're never highlighted.
+export const POORLY_TABULATED = new Set<NutrientKey>(["biotin", "chloride", "chromium", "molybdenum", "fluoride"]);
 
 /** Whether AI nutrition estimates are configured for this deployment. */
 export function aiAvailable() {
