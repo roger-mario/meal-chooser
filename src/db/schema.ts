@@ -94,3 +94,10 @@ export type Meal = typeof meals.$inferSelect;
 export type Category = typeof categories.$inferSelect;
 export type User = typeof users.$inferSelect;
 export type MealComment = typeof mealComments.$inferSelect;
+
+/** Wrong site passwords per IP address, so the password can't be guessed by trying many. */
+export const loginFailures = pgTable("login_failures", {
+  ip: text("ip").primaryKey(),
+  count: integer("count").notNull().default(0),
+  windowStart: timestamp("window_start", { withTimezone: true }).notNull().defaultNow(),
+});

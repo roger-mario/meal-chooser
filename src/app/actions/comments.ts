@@ -5,12 +5,14 @@ import { revalidatePath } from "next/cache";
 import { dataChanged } from "@/lib/cache";
 import { db, mealComments } from "@/db";
 import { getCurrentUser } from "@/lib/users";
+import { requireSite } from "@/lib/require-site";
 
 export type ChatState = { error?: string; sent?: number } | null;
 
 const MAX_LENGTH = 2000;
 
 export async function sendComment(mealId: number, _prev: ChatState, formData: FormData): Promise<ChatState> {
+  await requireSite();
   const user = await getCurrentUser();
   if (!user) return { error: "Pick who you are at the top right first." };
   const body = String(formData.get("body") ?? "").trim();
@@ -24,6 +26,7 @@ export async function sendComment(mealId: number, _prev: ChatState, formData: Fo
 
 /** People can only delete their own messages. */
 export async function deleteComment(id: number) {
+  await requireSite();
   const user = await getCurrentUser();
   if (!user) return;
   const [row] = await db()

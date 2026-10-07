@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { AUTH_COOKIE, AUTH_COOKIE_MAX_AGE, authToken } from "@/lib/site-auth";
+import { clientIp, isLockedOut, recordFailure } from "@/lib/login-limit";
+import { AUTH_COOKIE, AUTH_COOKIE_MAX_AGE, authToken, passwordMatches } from "@/lib/site-auth";
 
 // Open to everyone: shared meals, their photos and the ingredient pages Bring! imports. The API checks its own key (API_KEY) instead.
 const PUBLIC_PREFIXES = ["/s/", "/api/images/", "/api/v1/", "/api/bring/", "/login"];
@@ -17,11 +18,15 @@ export async function proxy(request: NextRequest) {
   // Browsers that still remember the old password prompt get the cookie without being asked.
   const header = request.headers.get("authorization");
   if (header?.startsWith("Basic ")) {
-    const decoded = atob(header.slice(6));
-    if (decoded.slice(decoded.indexOf(":") + 1) === password) {
-      const response = NextResponse.next();
-      response.cookies.set(AUTH_COOKIE, token, { httpOnly: true, secure: true, sameSite: "lax", maxAge: AUTH_COOKIE_MAX_AGE, path: "/" });
-      return response;
+    const ip = clientIp(request.headers);
+    if (!(await isLockedOut(ip))) {
+      const decoded = atob(header.slice(6));
+      if (await passwordMatches(decoded.slice(decoded.indexOf(":") + 1), password)) {
+        const response = NextResponse.next();
+        response.cookies.set(AUTH_COOKIE, token, { httpOnly: true, secure: true, sameSite: "lax", maxAge: AUTH_COOKIE_MAX_AGE, path: "/" });
+        return response;
+      }
+      await recordFailure(ip);
     }
   }
 

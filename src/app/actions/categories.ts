@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { dataChanged } from "@/lib/cache";
 import { categories, db } from "@/db";
 import { validEmoji } from "@/lib/emoji";
+import { requireSite } from "@/lib/require-site";
 
 export type CategoryFormState = { ok?: boolean; error?: string } | null;
 
@@ -18,6 +19,7 @@ function parse(formData: FormData) {
 }
 
 export async function createCategory(_prev: CategoryFormState, formData: FormData): Promise<CategoryFormState> {
+  await requireSite();
   const data = parse(formData);
   if ("error" in data) return { error: data.error };
   const inserted = await db().insert(categories).values(data).onConflictDoNothing().returning();
@@ -32,6 +34,7 @@ export async function updateCategory(
   _prev: CategoryFormState,
   formData: FormData,
 ): Promise<CategoryFormState> {
+  await requireSite();
   const data = parse(formData);
   if ("error" in data) return { error: data.error };
   try {
@@ -45,6 +48,7 @@ export async function updateCategory(
 }
 
 export async function deleteCategory(id: number) {
+  await requireSite();
   await db().delete(categories).where(eq(categories.id, id));
   dataChanged();
   revalidatePath("/", "layout");

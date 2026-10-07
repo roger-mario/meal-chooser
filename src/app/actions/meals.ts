@@ -15,6 +15,7 @@ import { deleteMealImage, ImageUploadError, uploadMealImage } from "@/lib/blob";
 import { DIETS, DIFFICULTIES, sanitizeIngredients, sanitizeLinks, type Ingredient, type MealLink } from "@/lib/meal-fields";
 import { estimateNutrition } from "@/lib/nutrition-ai";
 import { getCurrentUser } from "@/lib/users";
+import { requireSite } from "@/lib/require-site";
 
 export type FormState = { error?: string } | null;
 
@@ -93,6 +94,7 @@ async function setCategories(mealId: number, categoryIds: number[]) {
 }
 
 export async function createMeal(_prev: FormState, formData: FormData): Promise<FormState> {
+  await requireSite();
   const user = await getCurrentUser();
   let id: number;
   try {
@@ -113,6 +115,7 @@ export async function createMeal(_prev: FormState, formData: FormData): Promise<
 }
 
 export async function updateMeal(id: number, _prev: FormState, formData: FormData): Promise<FormState> {
+  await requireSite();
   try {
     const { categoryIds, ...data } = parseMealForm(formData);
     const [existing] = await db().select().from(meals).where(eq(meals.id, id));
@@ -140,6 +143,7 @@ export async function updateMeal(id: number, _prev: FormState, formData: FormDat
 }
 
 export async function deleteMeal(id: number) {
+  await requireSite();
   const [existing] = await db().delete(meals).where(eq(meals.id, id)).returning();
   await deleteMealImage(existing?.imageUrl);
   dataChanged();
@@ -155,6 +159,7 @@ export async function estimateMealNutrition(
   id: number,
   _prev: { error?: string } | null,
 ): Promise<{ error?: string } | null> {
+  await requireSite();
   const [meal] = await db().select().from(meals).where(eq(meals.id, id));
   if (!meal) return { error: "Meal not found" };
   if (!aiAvailable()) return { error: "AI estimates are not set up. Enter the values manually below." };
@@ -184,6 +189,7 @@ export async function estimateMealNutrition(
 }
 
 export async function saveManualNutrition(id: number, formData: FormData) {
+  await requireSite();
   const [meal] = await db().select().from(meals).where(eq(meals.id, id));
   if (!meal) throw new Error("Meal not found");
 
@@ -209,6 +215,7 @@ export async function saveManualNutrition(id: number, formData: FormData) {
 
 /** Starts the AI price estimate in the background; see estimateMealNutrition. */
 export async function estimateMealCost(id: number, _prev: FormState): Promise<FormState> {
+  await requireSite();
   const [meal] = await db().select().from(meals).where(eq(meals.id, id));
   if (!meal) return { error: "Meal not found" };
   if (!aiAvailable()) return { error: "AI estimates are not set up. Enter the prices manually below." };
@@ -238,6 +245,7 @@ export async function estimateMealCost(id: number, _prev: FormState): Promise<Fo
 }
 
 export async function saveManualCost(id: number, formData: FormData) {
+  await requireSite();
   const items: CostItem[] = [];
   for (const name of formData.getAll("itemName")) {
     const idx = items.length;
@@ -259,6 +267,7 @@ export async function saveManualCost(id: number, formData: FormData) {
 }
 
 export async function startSharing(id: number) {
+  await requireSite();
   const token = randomBytes(12).toString("base64url");
   await db().update(meals).set({ shareToken: token }).where(eq(meals.id, id));
   dataChanged();
@@ -266,6 +275,7 @@ export async function startSharing(id: number) {
 }
 
 export async function stopSharing(id: number) {
+  await requireSite();
   await db().update(meals).set({ shareToken: null }).where(eq(meals.id, id));
   dataChanged();
   revalidatePath(`/meals/${id}`);

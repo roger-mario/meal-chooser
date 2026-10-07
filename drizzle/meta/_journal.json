@@ -43,6 +43,13 @@
       "when": 1790602221771,
       "tag": "0005_ai_jobs_drop_plan",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1791369672416,
+      "tag": "0006_login_failures",
+      "breakpoints": true
     }
   ]
 }

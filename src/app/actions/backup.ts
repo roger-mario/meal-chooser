@@ -6,10 +6,12 @@ import { categories, db, meals } from "@/db";
 import { deleteMealImage } from "@/lib/blob";
 import { backupSchema } from "@/lib/meal-input";
 import { createMealFromInput, ensureCategories } from "@/lib/meal-store";
+import { requireSite } from "@/lib/require-site";
 
 export type ImportState = { error?: string; message?: string } | null;
 
 export async function importBackup(_prev: ImportState, formData: FormData): Promise<ImportState> {
+  await requireSite();
   const file = formData.get("file");
   const mode = formData.get("mode") === "replace" ? "replace" : "merge";
   if (!(file instanceof File) || file.size === 0) return { error: "Please choose a backup file." };
