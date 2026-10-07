@@ -25,7 +25,7 @@ import { getCurrentUser } from "@/lib/users";
 
 export const dynamic = "force-dynamic";
 // AI estimates can take a while.
-export const maxDuration = 120;
+export const maxDuration = 300;
 
 function OutdatedNote() {
   return (

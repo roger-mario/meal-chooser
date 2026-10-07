@@ -3,7 +3,7 @@ import { checkApiKey } from "@/lib/api-auth";
 import { startCostJob, startNutritionJob } from "@/lib/estimate-jobs";
 
 // The estimates run in the background after the response.
-export const maxDuration = 120;
+export const maxDuration = 300;
 
 /** Starts new AI estimates for a meal. `?only=nutrition` or `?only=cost` runs just one of them. */
 export async function POST(request: Request, ctx: RouteContext<"/api/v1/meals/[id]/estimate">) {

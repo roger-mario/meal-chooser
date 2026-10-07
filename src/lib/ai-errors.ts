@@ -1,7 +1,7 @@
 import "server-only";
 
-/** Background estimates normally finish within a minute; older ones were cut off and count as failed. */
-export const JOB_TIMEOUT_MS = 150_000;
+/** Background estimates of long recipes can take a few minutes; older ones were cut off and count as failed. */
+export const JOB_TIMEOUT_MS = 320_000;
 
 export function isRunning(startedAt: Date | null | undefined) {
   return !!startedAt && Date.now() - startedAt.getTime() < JOB_TIMEOUT_MS;
