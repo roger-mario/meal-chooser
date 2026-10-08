@@ -45,7 +45,6 @@ const readSchema = z.object({
     }),
   ),
   confidence: z.enum(["low", "medium", "high"]).describe("How reliable the amounts are given the recipe detail"),
-  assumptions: z.array(z.string()).describe("Assumed quantities, product types or sizes, in short sentences"),
 });
 
 const pickSchema = z.object({
@@ -133,7 +132,7 @@ function round(v: number) {
   return v >= 100 ? Math.round(v) : v >= 1 ? Math.round(v * 10) / 10 : Math.round(v * 100) / 100;
 }
 
-type Read = z.infer<typeof readSchema>;
+type Read = z.infer<typeof readSchema> & { assumptions?: string[] };
 type Part = { ingredient: number; search: string; share: number; candidates: Food[] };
 /** What each ingredient part was matched to: a USDA food, or the AI's own values. */
 export type Resolved = { food: Food | null; per100g: Partial<Record<NutrientKey, number>> };
@@ -161,7 +160,7 @@ export async function estimateNutrition(meal: Meal): Promise<NutritionEstimate> 
       "(chicken (breast), rice (jasmine)). Products are bought in Switzerland.",
       "grams: weigh rice, pasta, oats and pulses DRY and meat, fish, eggs and vegetables RAW. Convert kitchen units with:",
       CONVERSIONS,
-      "Amounts in g, kg, ml and l are weighed by Otao; don't list them as assumptions. For water use 0 g. For frying oil, count only what is absorbed/eaten. 'To taste' means a small realistic amount.",
+      "Amounts in g, kg, ml and l are weighed by Otao; For water use 0 g. For frying oil, count only what is absorbed/eaten. 'To taste' means a small realistic amount.",
       "parts.search: words for the USDA SR Legacy entry in the same state as the grams (raw/dry/as sold, never cooked",
       "for a dry or raw weight). Use the closest standard food when a variety isn't in the table (jasmine rice → rice white",
       "long-grain raw). Split a mixed ingredient into its usual components with shares that add up to 1.",
@@ -172,9 +171,19 @@ export async function estimateNutrition(meal: Meal): Promise<NutritionEstimate> 
   });
 
   // Amounts in g, kg, ml or l and common pieces are weighed here, not by the AI, which sometimes mixes up the units.
+  // The AI's own assumptions tend to ramble or describe conversions that were overridden here, so
+  // the list shown is written in code: the amounts the AI weighed and how mixes were split.
+  const assumed: string[] = [];
   for (const ing of read.ingredients) {
-    const grams = knownGrams(ingredients[ing.line - 1]);
+    const line = ingredients[ing.line - 1];
+    const grams = knownGrams(line);
     if (grams !== null) ing.grams = grams;
+    else if (line) assumed.push(`${formatIngredient(line)} ≈ ${Math.round(ing.grams)} g`);
+    if (ing.parts.length > 1) {
+      const total = ing.parts.reduce((s, p) => s + p.share, 0) || 1;
+      const split = ing.parts.map((p) => `${p.search} ${Math.round((p.share / total) * 100)}%`).join(", ");
+      assumed.push(`${ing.name} split into ${split}`);
+    }
   }
 
   // 2. Find the foods and let the AI pick.
@@ -212,7 +221,7 @@ export async function estimateNutrition(meal: Meal): Promise<NutritionEstimate> 
     return { food: null, per100g: own };
   });
 
-  return { ...computeNutrition(read, parts, resolved, servings, model), basis: estimateBasis(meal) };
+  return { ...computeNutrition({ ...read, assumptions: assumed }, parts, resolved, servings, model), basis: estimateBasis(meal) };
 }
 
 /** Adds up the ingredients and divides by the servings. Exported for testing. */
@@ -224,7 +233,7 @@ export function computeNutrition(
   model?: string,
 ): NutritionEstimate {
   const totals: Partial<Record<NutrientKey, number>> = {};
-  const assumptions = [...read.assumptions];
+  const assumptions = [...(read.assumptions ?? [])];
   const perIngredient: IngredientNutrition[] = read.ingredients.map((ing) => ({
     name: ing.name,
     grams: Math.round(ing.grams),
