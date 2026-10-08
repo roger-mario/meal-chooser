@@ -175,8 +175,10 @@ export default async function HelpPage() {
           variables and redeploy.
         </p>
         <p>
-          Nutrition and prices are always <b>per portion</b>. The AI looks up values per 100 g for each ingredient (rice
-          and pasta dry, meat raw) and Otao does the maths, including vitamin losses from cooking. Prices assume regular
+          Nutrition and prices are always <b>per portion</b>. The AI reads the amounts and picks the matching food from the
+          USDA food table (rice and pasta dry, meat raw); Otao takes the values per 100 g from that table and does the
+          maths, including vitamin losses from cooking. The % next to a nutrient is its share of the adult Daily Value
+          used on food labels (US FDA), e.g. calcium 1300 mg or fibre 28 g; only nutrients at 10% or more are listed. Prices assume regular
           Migros prices for the standard line with Swiss meat; promotions and M-Budget are cheaper. When you change the
           ingredients or servings, the meal shows that the estimate is outdated.
         </p>

@@ -31,7 +31,7 @@ function OutdatedNote() {
   return (
     <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900">
       ⚠️ The ingredients or servings changed since this estimate, or it was made with an older, less accurate method.
-      Estimate again for up-to-date values.
+      Open the details below and re-estimate for up-to-date values.
     </p>
   );
 }
@@ -46,6 +46,26 @@ export default async function MealPage({ params }: PageProps<"/meals/[id]">) {
   ]);
   if (!meal) notFound();
   const ai = aiAvailable();
+  const costJob = jobStatus(meal.costJobStartedAt, meal.costJobError);
+  const nutritionJob = jobStatus(meal.nutritionJobStartedAt, meal.nutritionJobError);
+  const costButton = ai && (
+    <EstimateButton
+      action={estimateMealCost.bind(null, meal.id)}
+      hasEstimate={!!meal.cost}
+      label="Estimate prices with AI"
+      job={costJob}
+      workingText={`AI is checking ${COST_STORE} prices…`}
+    />
+  );
+  const nutritionButton = ai && (
+    <EstimateButton
+      action={estimateMealNutrition.bind(null, meal.id)}
+      hasEstimate={!!meal.nutrition}
+      label="Estimate nutrition with AI"
+      job={nutritionJob}
+      workingText="AI is calculating nutrition…"
+    />
+  );
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -67,56 +87,61 @@ export default async function MealPage({ params }: PageProps<"/meals/[id]">) {
       />
 
       <section className="card space-y-4 p-4 sm:p-6">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-lg font-semibold">💰 Cost at {COST_STORE}</h2>
-          {ai && (
-            <EstimateButton
-              action={estimateMealCost.bind(null, meal.id)}
-              hasEstimate={!!meal.cost}
-              label="Estimate prices with AI"
-              job={jobStatus(meal.costJobStartedAt, meal.costJobError)}
-              workingText={`AI is checking ${COST_STORE} prices…`}
-            />
-          )}
-        </div>
+        <h2 className="text-lg font-semibold">💰 Cost at {COST_STORE}</h2>
         {isOutdated(meal.cost, meal) && <OutdatedNote />}
         {meal.cost && meal.cost.items.length > 0 ? (
-          <CostPanel cost={meal.cost} servings={meal.servings} />
+          <CostPanel
+            cost={meal.cost}
+            servings={meal.servings}
+            detailsOpen={costJob.running || !!costJob.error}
+            details={
+              <>
+                {costButton}
+                <CostForm mealId={meal.id} ingredients={meal.ingredients} cost={meal.cost} />
+              </>
+            }
+          />
         ) : (
-          <p className="text-sm text-stone-500">
-            {ai
-              ? `No prices yet. Let the AI estimate current ${COST_STORE} prices, or enter them yourself.`
-              : `No prices yet. Enter what each ingredient costs at ${COST_STORE} below.`}
-          </p>
+          <>
+            <p className="text-sm text-stone-500">
+              {ai
+                ? `No prices yet. Let the AI estimate current ${COST_STORE} prices, or enter them yourself.`
+                : `No prices yet. Enter what each ingredient costs at ${COST_STORE} below.`}
+            </p>
+            {costButton}
+            <CostForm mealId={meal.id} ingredients={meal.ingredients} cost={meal.cost} />
+          </>
         )}
-        <CostForm mealId={meal.id} ingredients={meal.ingredients} cost={meal.cost} />
       </section>
 
       <section className="card space-y-4 p-4 sm:p-6">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-lg font-semibold">🥗 Nutrition per serving</h2>
-          {ai && (
-            <EstimateButton
-              action={estimateMealNutrition.bind(null, meal.id)}
-              hasEstimate={!!meal.nutrition}
-              label="Estimate nutrition with AI"
-              job={jobStatus(meal.nutritionJobStartedAt, meal.nutritionJobError)}
-              workingText="AI is calculating nutrition…"
-            />
-          )}
-        </div>
+        <h2 className="text-lg font-semibold">🥗 Nutrition per serving</h2>
         {isOutdated(meal.nutrition, meal) && <OutdatedNote />}
-        {meal.nutrition && <HealthSummary nutrition={meal.nutrition} />}
         {meal.nutrition ? (
-          <NutritionPanel nutrition={meal.nutrition} />
+          <>
+            <HealthSummary nutrition={meal.nutrition} />
+            <NutritionPanel
+              nutrition={meal.nutrition}
+              detailsOpen={nutritionJob.running || !!nutritionJob.error}
+              details={
+                <>
+                  {nutritionButton}
+                  <NutritionForm mealId={meal.id} nutrition={meal.nutrition} />
+                </>
+              }
+            />
+          </>
         ) : (
-          <p className="text-sm text-stone-500">
-            {ai
-              ? "No values yet. Let the AI estimate calories, macros, vitamins and minerals, or enter them yourself."
-              : "No values yet. Enter them below, for example from a package label or a nutrition app."}
-          </p>
+          <>
+            <p className="text-sm text-stone-500">
+              {ai
+                ? "No values yet. Let the AI estimate calories, macros, vitamins and minerals, or enter them yourself."
+                : "No values yet. Enter them below, for example from a package label or a nutrition app."}
+            </p>
+            {nutritionButton}
+            <NutritionForm mealId={meal.id} nutrition={meal.nutrition} />
+          </>
         )}
-        <NutritionForm mealId={meal.id} nutrition={meal.nutrition} />
       </section>
 
       <section id="chat" className="card space-y-4 p-4 sm:p-6">

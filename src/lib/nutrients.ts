@@ -85,17 +85,28 @@ export type NutritionEstimate = {
    * AI estimates: how much of each ingredient the whole recipe uses, the basis of the calculation.
    * `plant` and `processing` feed the health score (plant variety, ultra-processed foods).
    */
-  ingredients?: { name: string; grams: number; plant?: boolean; processing?: Processing }[];
+  ingredients?: IngredientNutrition[];
   /** Fingerprint of the servings and ingredients the estimate was made for; see estimateBasis(). */
   basis?: string;
+};
+
+export type IngredientNutrition = {
+  name: string;
+  grams: number;
+  plant?: boolean;
+  processing?: Processing;
+  /** Where the values come from, e.g. "USDA: Nuts, walnuts, english" or "AI estimate". */
+  source?: string;
+  /** What this ingredient adds to one serving, so the page can say where a nutrient comes from. */
+  perServing?: Partial<Record<NutrientKey, number>>;
 };
 
 /** NOVA-style level: whole foods, processed (cheese, bread, canned) or ultra-processed (sausages, sweets). */
 export type Processing = "whole" | "processed" | "ultra";
 
-// Food tables barely cover these, so estimates of them are guesses: the AI doesn't estimate them
-// and they're never highlighted.
-export const POORLY_TABULATED = new Set<NutrientKey>(["biotin", "chloride", "chromium", "molybdenum", "fluoride"]);
+// Food tables barely cover these (USDA has almost no iodine data), so estimates of them are guesses:
+// they aren't estimated and never highlighted.
+export const POORLY_TABULATED = new Set<NutrientKey>(["biotin", "chloride", "chromium", "molybdenum", "fluoride", "iodine"]);
 
 /** Whether AI nutrition estimates are configured for this deployment. */
 export function aiAvailable() {

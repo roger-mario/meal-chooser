@@ -1,57 +1,73 @@
 import "server-only";
 import { generateText, Output } from "ai";
 import { z } from "zod";
-import { NUTRIENTS, POORLY_TABULATED, type NutrientKey, type NutritionEstimate } from "./nutrients";
+import { NUTRIENTS, POORLY_TABULATED, type IngredientNutrition, type NutrientKey, type NutritionEstimate } from "./nutrients";
 import { estimateBasis } from "./estimate-basis";
+import { getFood, searchFoods, type Food } from "./food-table";
 import type { Meal } from "@/db/schema";
 import { formatIngredient, normalizeIngredients, normalizeSteps } from "./meal-fields";
 
-// Nutrients that food tables barely cover are left out: guesses there would only add noise.
+// How an estimate is made:
+// 1. The AI reads the recipe: grams of each ingredient (dry/raw, as listed) and English search
+//    words for the matching food in the USDA food table. A mix ("frozen berries") can be split into parts.
+// 2. Otao searches the USDA table and the AI picks the right entry for each part from the matches.
+//    Only when nothing fits does it give its own values per 100 g.
+// 3. Otao does all the maths: USDA values × grams, cooking losses, per serving.
+// So the nutrient values come from measured food data, not from the AI's memory.
+
 const KEYS = NUTRIENTS.map((n) => n.key).filter((k) => !POORLY_TABULATED.has(k)) as [NutrientKey, ...NutrientKey[]];
 const UNIT_LIST = NUTRIENTS.filter((n) => KEYS.includes(n.key)).map((n) => `${n.key} (${n.unit})`).join(", ");
 
-// The model only looks up reference values per 100 g of each ingredient and the grams the
-// recipe uses. All sums, cooking losses and the division into servings happen in code, so the
-// result is always per serving and the arithmetic can't go wrong.
-const schema = z.object({
+const readSchema = z.object({
   ingredients: z.array(
     z.object({
       name: z.string().describe("Ingredient name as given in the recipe"),
       grams: z
         .number()
         .min(0)
-        .describe("Grams of this ingredient in the WHOLE recipe (all servings), weighed as listed: dry for rice/pasta/oats, raw for meat/fish/veg"),
-      state: z
-        .enum(["raw", "dry", "as sold"])
-        .describe("The state the grams AND per100g values describe: raw (fresh produce, meat, fish, eggs), dry (uncooked grains, pasta, legumes, flakes), as sold (cheese, sauces, canned, drinks)"),
+        .describe("Grams in the WHOLE recipe (all servings), weighed as listed: dry for rice/pasta/oats, raw for meat/fish/veg"),
+      state: z.enum(["raw", "dry", "as sold"]).describe("raw (fresh produce, meat, fish, eggs), dry (uncooked grains, pasta, legumes, flakes), as sold (cheese, sauces, canned, drinks, powders)"),
       cooked: z.boolean().describe("Whether the recipe heats this ingredient"),
       plant: z.boolean().describe("A plant food: vegetable, fruit, grain, legume, nut, seed, herb or spice"),
       processing: z
         .enum(["whole", "processed", "ultra"])
         .describe("whole: unprocessed or minimally processed; processed: cheese, bread, canned, cured; ultra: sausages, pepperoni, sweets, protein powder, instant products"),
-      per100g: z
-        .array(z.object({ key: z.enum(KEYS), value: z.number().min(0) }))
-        .describe("Nutrients per 100 g of this ingredient in the SAME state as `grams`, in the units listed in the instructions"),
+      parts: z
+        .array(
+          z.object({
+            search: z.string().describe("English words to find the food in the USDA SR Legacy table, in its wording and state, e.g. 'rice white long-grain raw', 'chicken breast skinless boneless raw', 'raspberries frozen unsweetened'"),
+            share: z.number().min(0).max(1).describe("Share of this ingredient's grams; 1 unless it's a mix"),
+          }),
+        )
+        .min(1)
+        .describe("Usually one part. Split mixes into their usual components, e.g. frozen mixed berries → strawberries, raspberries, blueberries, blackberries"),
     }),
   ),
-  confidence: z.enum(["low", "medium", "high"]).describe("How reliable the estimate is given the recipe detail"),
-  summary: z.string().describe("Two sentences on the nutritional profile of one serving"),
-  assumptions: z.array(z.string()).describe("Assumed quantities, product types or sizes"),
+  confidence: z.enum(["low", "medium", "high"]).describe("How reliable the amounts are given the recipe detail"),
+  assumptions: z.array(z.string()).describe("Assumed quantities, product types or sizes, in short sentences"),
 });
 
-type Output = z.infer<typeof schema>;
+const pickSchema = z.object({
+  picks: z.array(
+    z.object({
+      part: z.number().int().describe("The part number"),
+      foodId: z.number().int().describe("The id of the best matching food, or 0 when none of them is the same food in the same state"),
+      per100g: z
+        .array(z.object({ key: z.enum(KEYS), value: z.number().min(0) }))
+        .optional()
+        .describe("Only when foodId is 0: nutrients per 100 g from food composition tables"),
+    }),
+  ),
+});
 
-// Highest plausible amount per 100 g of any ordinary food, as a multiple of the daily value.
-// Anything above is almost certainly a unit mix-up (e.g. IU instead of µg) and is dropped.
-const MAX_DV_PER_100G = 40;
-
-function plausible(key: NutrientKey, value: number) {
-  const def = NUTRIENTS.find((n) => n.key === key)!;
-  if (!Number.isFinite(value) || value < 0) return false;
-  if (def.group === "macros" || def.group === "fats") return value <= 100; // grams per 100 g
-  if (key === "calories") return value <= 900;
-  return !("dailyValue" in def) || value <= def.dailyValue * MAX_DV_PER_100G;
-}
+// Usual weights, so every estimate converts kitchen units the same way.
+const CONVERSIONS = [
+  "1 cup dry rice ≈ 185 g, 1 cup dry pasta ≈ 100 g, 1 cup oats ≈ 80 g, 1 cup flour ≈ 125 g, 1 cup frozen peas ≈ 135 g,",
+  "1 cup berries ≈ 145 g, 1 cup milk/kefir ≈ 245 g; 1 tbsp oil ≈ 13 g, 1 tbsp chia ≈ 12 g, 1 tsp salt ≈ 6 g, 1 tsp spice ≈ 2.5 g;",
+  "1 egg ≈ 50 g, 1 medium onion ≈ 110 g, 1 carrot ≈ 60 g, 1 bell pepper ≈ 120 g, 1 banana ≈ 118 g, 1 spring onion ≈ 15 g,",
+  "1 mushroom ≈ 18 g, 1 walnut (kernel) ≈ 5 g, 1 garlic clove ≈ 4 g; 1 can tomatoes/sauce ≈ 400 g, 1 can corn or beans ≈ 285 g",
+  "drained (a half can ≈ 140 g); a pack/bunch of cherry tomatoes ≈ 250 g, a bunch of herbs ≈ 30 g; a slice of butter ≈ 10 g.",
+].join("\n");
 
 // Share of heat-sensitive vitamins left after ordinary cooking (USDA retention factors, rounded).
 const RETENTION: Partial<Record<NutrientKey, number>> = {
@@ -67,18 +83,26 @@ const RETENTION: Partial<Record<NutrientKey, number>> = {
 // only 110–160; values that low next to a dry weight mean cooked values were used by mistake.
 const DRY_STAPLE = /\b(rice|reis|pasta|spaghetti|penne|rotini|fusilli|noodle|nudel|oat|hafer|quinoa|couscous|bulgur|lentil|linsen|polenta|barley|gerste|millet|hirse|flour|mehl)/i;
 
+// Highest plausible amount per 100 g of any ordinary food, as a multiple of the daily value.
+// Only used for the AI's own values; anything above is almost certainly a unit mix-up.
+const MAX_DV_PER_100G = 40;
+
+function plausible(key: NutrientKey, value: number) {
+  const def = NUTRIENTS.find((n) => n.key === key)!;
+  if (!Number.isFinite(value) || value < 0) return false;
+  if (def.group === "macros" || def.group === "fats") return value <= 100;
+  if (key === "calories") return value <= 900;
+  return !("dailyValue" in def) || value <= def.dailyValue * MAX_DV_PER_100G;
+}
+
 function round(v: number) {
   return v >= 100 ? Math.round(v) : v >= 1 ? Math.round(v * 10) / 10 : Math.round(v * 100) / 100;
 }
 
-// Usual weights, so every estimate converts kitchen units the same way.
-const CONVERSIONS = [
-  "1 cup dry rice ≈ 185 g, 1 cup dry pasta ≈ 100 g, 1 cup oats ≈ 80 g, 1 cup flour ≈ 125 g, 1 cup frozen peas ≈ 135 g,",
-  "1 cup berries ≈ 145 g, 1 cup milk/kefir ≈ 245 g; 1 tbsp oil ≈ 13 g, 1 tbsp chia ≈ 12 g, 1 tsp salt ≈ 6 g, 1 tsp spice ≈ 2.5 g;",
-  "1 egg ≈ 50 g, 1 medium onion ≈ 110 g, 1 carrot ≈ 60 g, 1 bell pepper ≈ 120 g, 1 banana ≈ 118 g, 1 spring onion ≈ 15 g,",
-  "1 mushroom ≈ 18 g, 1 walnut (kernel) ≈ 5 g, 1 garlic clove ≈ 4 g; 1 can tomatoes/sauce ≈ 400 g, 1 can corn or beans ≈ 285 g",
-  "drained (a half can ≈ 140 g); a pack/bunch of cherry tomatoes ≈ 250 g, a bunch of herbs ≈ 30 g; a slice of butter ≈ 10 g.",
-].join("\n");
+type Read = z.infer<typeof readSchema>;
+type Part = { ingredient: number; search: string; share: number; candidates: Food[] };
+/** What each ingredient part was matched to: a USDA food, or the AI's own values. */
+export type Resolved = { food: Food | null; per100g: Partial<Record<NutrientKey, number>> };
 
 export async function estimateNutrition(meal: Meal): Promise<NutritionEstimate> {
   const model = process.env.AI_MODEL;
@@ -88,63 +112,102 @@ export async function estimateNutrition(meal: Meal): Promise<NutritionEstimate> 
   if (ingredients.length === 0) throw new Error("Add ingredients to the meal first.");
   const steps = normalizeSteps(meal.steps, meal.instructions);
 
-  const prompt = [
-    `Recipe: ${meal.name} (the whole recipe makes ${servings} serving${servings === 1 ? "" : "s"})`,
-    `Ingredients for the WHOLE recipe (use exactly these amounts, even if the steps or a source say otherwise):`,
-    ingredients.map((i) => `- ${formatIngredient(i)}`).join("\n"),
-    steps.length ? `Steps (only for how things are cooked):\n${steps.map((s, i) => `${i + 1}. ${s}`).join("\n")}` : "",
-    "",
-    "An amount like 600–700 g is a range: use its midpoint. Text in brackets after a name is the kind, cut or variety",
-    "(e.g. chicken (breast), rice (jasmine)); use values for exactly that kind. Swiss shops sell these products.",
-    "",
-    "For every ingredient:",
-    "1. grams: the amount in the whole recipe, in grams, weighed the way it is listed: rice, pasta, oats and pulses DRY,",
-    "   meat, fish, eggs and vegetables RAW. Convert kitchen units with these weights:",
-    CONVERSIONS,
-    "   For water use 0 g. For frying oil, count only what is absorbed/eaten. 'To taste' means a small realistic amount.",
-    "2. per100g: nutrient content per 100 g in the SAME state as grams (dry rice ≈ 360 kcal and 80 g carbs per 100 g,",
-    "   NOT cooked rice; raw chicken breast ≈ 120 kcal and 22.5 g protein, NOT cooked). Do not reduce vitamins for",
-    "   cooking: the app applies cooking losses itself. Use USDA FoodData Central or the Swiss Food Composition Database.",
-    "   Always give calories, protein, carbohydrates, fat, fiber, sugars and saturatedFat. Give each other nutrient when",
-    "   the ingredient contains a meaningful amount of it; leave it out when it's zero, trace or unknown (never write 0",
-    "   for an unknown value).",
-    "",
-    `Units per 100 g (use exactly these): ${UNIT_LIST}.`,
-    "Vitamin A is µg RAE, NOT IU (raw carrot ≈ 835 µg RAE/100 g). Vitamin D is µg, NOT IU. Folate is µg DFE.",
-    "omega3 is the sum of ALA, EPA and DHA in grams. addedSugars only counts sugar added by a manufacturer or the cook.",
-    "Do not multiply or divide by servings: the app does that.",
-  ]
-    .filter(Boolean)
-    .join("\n");
-
-  const { output } = await generateText({
+  // 1. Amounts and what to look up.
+  const { output: read } = await generateText({
     model,
-    output: Output.object({ schema }),
-    system:
-      "You are a registered dietitian. You know food composition tables well and give realistic, conservative values.",
-    prompt,
+    output: Output.object({ schema: readSchema }),
+    system: "You are a registered dietitian who knows the USDA FoodData Central tables well.",
+    prompt: [
+      `Recipe: ${meal.name} (the whole recipe makes ${servings} serving${servings === 1 ? "" : "s"})`,
+      "Ingredients for the WHOLE recipe (use exactly these amounts, even if the steps or a source say otherwise):",
+      ingredients.map((i) => `- ${formatIngredient(i)}`).join("\n"),
+      steps.length ? `Steps (only for how things are cooked):\n${steps.map((s, i) => `${i + 1}. ${s}`).join("\n")}` : "",
+      "",
+      "An amount like 600–700 g is a range: use its midpoint. Text in brackets after a name is the kind, cut or variety",
+      "(chicken (breast), rice (jasmine)). Products are bought in Switzerland.",
+      "grams: weigh rice, pasta, oats and pulses DRY and meat, fish, eggs and vegetables RAW. Convert kitchen units with:",
+      CONVERSIONS,
+      "For water use 0 g. For frying oil, count only what is absorbed/eaten. 'To taste' means a small realistic amount.",
+      "parts.search: words for the USDA SR Legacy entry in the same state as the grams (raw/dry/as sold, never cooked",
+      "for a dry or raw weight). Use the closest standard food when a variety isn't in the table (jasmine rice → rice white",
+      "long-grain raw). Split a mixed ingredient into its usual components with shares that add up to 1.",
+    ]
+      .filter(Boolean)
+      .join("\n"),
     temperature: 0,
   });
 
-  return { ...computeNutrition(output, servings, model), basis: estimateBasis(meal) };
+  // 2. Find the foods and let the AI pick.
+  const parts: Part[] = read.ingredients.flatMap((ing, i) => {
+    const total = ing.parts.reduce((s, p) => s + p.share, 0) || 1;
+    return ing.parts.map((p) => ({ ingredient: i, search: p.search, share: p.share / total, candidates: searchFoods(p.search) }));
+  });
+  const { output: picked } = await generateText({
+    model,
+    output: Output.object({ schema: pickSchema }),
+    system: "You are a registered dietitian who knows the USDA FoodData Central tables well.",
+    prompt: [
+      "Pick the USDA food that matches each part below: the same food, in the same state (raw, dry or as sold).",
+      "Prefer plain, unsweetened, unsalted, unbranded entries unless the part says otherwise.",
+      "If no candidate fits, use foodId 0 and give per100g from food composition tables instead.",
+      `Units per 100 g: ${UNIT_LIST}. Vitamin A µg RAE, vitamin D µg, folate µg DFE, omega3 = ALA+EPA+DHA in g.`,
+      "",
+      parts
+        .map((p, n) => {
+          const ing = read.ingredients[p.ingredient];
+          const list = p.candidates.map((c) => `   ${c.id}: ${c.description}`).join("\n") || "   (no matches)";
+          return `Part ${n + 1}: ${ing.name}, ${ing.state} ("${p.search}")\n${list}`;
+        })
+        .join("\n"),
+    ].join("\n"),
+    temperature: 0,
+  });
+
+  const resolved: Resolved[] = parts.map((p, n) => {
+    const pick = picked.picks.find((x) => x.part === n + 1);
+    const food = pick?.foodId ? (p.candidates.find((c) => c.id === pick.foodId) ?? getFood(pick.foodId)) : null;
+    if (food) return { food, per100g: food.per100g };
+    const own: Resolved["per100g"] = {};
+    for (const { key, value } of pick?.per100g ?? []) if (plausible(key, value)) own[key] = value;
+    return { food: null, per100g: own };
+  });
+
+  return { ...computeNutrition(read, parts, resolved, servings, model), basis: estimateBasis(meal) };
 }
 
 /** Adds up the ingredients and divides by the servings. Exported for testing. */
-export function computeNutrition(output: Output, servings: number, model?: string): NutritionEstimate {
+export function computeNutrition(
+  read: Read,
+  parts: { ingredient: number; share: number }[],
+  resolved: Resolved[],
+  servings: number,
+  model?: string,
+): NutritionEstimate {
   const totals: Partial<Record<NutrientKey, number>> = {};
-  const dropped = new Set<string>();
-  const assumptions = [...output.assumptions];
-  for (const ing of output.ingredients) {
-    const grams = Math.max(0, ing.grams);
-    const values = new Map(ing.per100g.filter((v) => KEYS.includes(v.key)).map((v) => [v.key, v.value]));
-    // Energy per 100 g should match the macros (4/4/9 kcal per g, 2 for fibre); if the model's value drifts, trust the macros.
-    const macroKcal =
-      4 * (values.get("protein") ?? 0) +
-      4 * Math.max(0, (values.get("carbohydrates") ?? 0) - (values.get("fiber") ?? 0)) +
-      2 * (values.get("fiber") ?? 0) +
-      9 * (values.get("fat") ?? 0);
-    const kcal = values.get("calories");
-    if (macroKcal > 0 && (kcal == null || Math.abs(kcal - macroKcal) / macroKcal > 0.25)) values.set("calories", macroKcal);
+  const assumptions = [...read.assumptions];
+  const perIngredient: IngredientNutrition[] = read.ingredients.map((ing) => ({
+    name: ing.name,
+    grams: Math.round(ing.grams),
+    plant: ing.plant,
+    processing: ing.processing,
+    perServing: {},
+  }));
+  const sources: string[][] = read.ingredients.map(() => []);
+
+  parts.forEach((part, n) => {
+    const ing = read.ingredients[part.ingredient];
+    const { food, per100g } = resolved[n];
+    const values = new Map(Object.entries(per100g) as [NutrientKey, number][]);
+    if (!food) {
+      // The AI's own values: energy should match the macros (4/4/9 kcal per g, 2 for fibre).
+      const macroKcal =
+        4 * (values.get("protein") ?? 0) +
+        4 * Math.max(0, (values.get("carbohydrates") ?? 0) - (values.get("fiber") ?? 0)) +
+        2 * (values.get("fiber") ?? 0) +
+        9 * (values.get("fat") ?? 0);
+      const kcal = values.get("calories");
+      if (macroKcal > 0 && (kcal == null || Math.abs(kcal - macroKcal) / macroKcal > 0.25)) values.set("calories", macroKcal);
+    }
     // Cooked values next to a dry weight: scale them back up to dry.
     const energy = values.get("calories") ?? 0;
     if (DRY_STAPLE.test(ing.name) && ing.state === "dry" && energy > 0 && energy < 220) {
@@ -152,36 +215,32 @@ export function computeNutrition(output: Output, servings: number, model?: strin
       for (const [k, v] of values) values.set(k, v * factor);
       assumptions.push(`${ing.name}: converted cooked values to dry weight.`);
     }
+    const grams = Math.max(0, ing.grams) * part.share;
+    const target = perIngredient[part.ingredient].perServing!;
     for (const [key, value] of values) {
-      if (!plausible(key, value)) {
-        dropped.add(`${NUTRIENTS.find((n) => n.key === key)!.label} in ${ing.name}`);
-        continue;
-      }
+      if (!KEYS.includes(key)) continue;
       const kept = ing.cooked ? (RETENTION[key] ?? 1) : 1;
-      totals[key] = (totals[key] ?? 0) + (value * grams * kept) / 100;
+      const amount = (value * grams * kept) / 100;
+      totals[key] = (totals[key] ?? 0) + amount;
+      target[key] = (target[key] ?? 0) + amount / servings;
     }
-  }
+    sources[part.ingredient].push(food ? `USDA: ${food.description}` : "AI estimate");
+  });
 
   const perServing: NutritionEstimate["perServing"] = {};
-  for (const [key, total] of Object.entries(totals) as [NutrientKey, number][]) {
-    perServing[key] = round(total / servings);
+  for (const [key, total] of Object.entries(totals) as [NutrientKey, number][]) perServing[key] = round(total / servings);
+  for (const [i, ing] of perIngredient.entries()) {
+    ing.source = [...new Set(sources[i])].join(" + ");
+    for (const [k, v] of Object.entries(ing.perServing!) as [NutrientKey, number][]) ing.perServing![k] = round(v);
   }
-
-  if (dropped.size) assumptions.push(`Left out implausible values: ${[...dropped].join(", ")}.`);
 
   return {
     perServing,
     servings,
     source: "ai",
-    confidence: output.confidence,
-    summary: output.summary,
+    confidence: read.confidence,
     assumptions,
     model,
-    ingredients: output.ingredients.map((i) => ({
-      name: i.name,
-      grams: Math.round(i.grams),
-      plant: i.plant,
-      processing: i.processing,
-    })),
+    ingredients: perIngredient,
   };
 }
