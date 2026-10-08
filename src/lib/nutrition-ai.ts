@@ -5,7 +5,7 @@ import { NUTRIENTS, POORLY_TABULATED, type IngredientNutrition, type NutrientKey
 import { estimateBasis } from "./estimate-basis";
 import { getFood, searchFoods, type Food } from "./food-table";
 import type { Meal } from "@/db/schema";
-import { formatIngredient, normalizeIngredients, normalizeSteps } from "./meal-fields";
+import { formatIngredient, normalizeIngredients, normalizeSteps, type Ingredient } from "./meal-fields";
 
 // How an estimate is made:
 // 1. The AI reads the recipe: grams of each ingredient (dry/raw, as listed) and English search
@@ -21,6 +21,7 @@ const UNIT_LIST = NUTRIENTS.filter((n) => KEYS.includes(n.key)).map((n) => `${n.
 const readSchema = z.object({
   ingredients: z.array(
     z.object({
+      line: z.number().int().describe("The recipe line number this ingredient comes from"),
       name: z.string().describe("Ingredient name as given in the recipe"),
       grams: z
         .number()
@@ -95,6 +96,27 @@ function plausible(key: NutrientKey, value: number) {
   return !("dailyValue" in def) || value <= def.dailyValue * MAX_DV_PER_100G;
 }
 
+// Grams per ml for the liquids where it matters; everything else ≈ water.
+const DENSITY: [RegExp, number][] = [
+  [/\b(oil|öl|olivenöl)\b/i, 0.92],
+  [/\b(honey|honig|syrup|sirup)\b/i, 1.4],
+  [/\b(milk|milch|kefir|yog|joghurt|cream|rahm|sahne)/i, 1.03],
+];
+
+/** Grams for an amount given in a metric unit (midpoint of a range), or null for kitchen units. */
+export function metricGrams(i: Ingredient | undefined): number | null {
+  if (!i?.quantity) return null;
+  const q = i.quantityMax ? (i.quantity + i.quantityMax) / 2 : i.quantity;
+  const density = DENSITY.find(([re]) => re.test(i.name))?.[1] ?? 1;
+  switch (i.unit) {
+    case "g": return q;
+    case "kg": return q * 1000;
+    case "ml": return q * density;
+    case "l": return q * 1000 * density;
+    default: return null;
+  }
+}
+
 function round(v: number) {
   return v >= 100 ? Math.round(v) : v >= 1 ? Math.round(v * 10) / 10 : Math.round(v * 100) / 100;
 }
@@ -120,7 +142,7 @@ export async function estimateNutrition(meal: Meal): Promise<NutritionEstimate> 
     prompt: [
       `Recipe: ${meal.name} (the whole recipe makes ${servings} serving${servings === 1 ? "" : "s"})`,
       "Ingredients for the WHOLE recipe (use exactly these amounts, even if the steps or a source say otherwise):",
-      ingredients.map((i) => `- ${formatIngredient(i)}`).join("\n"),
+      ingredients.map((i, n) => `${n + 1}. ${formatIngredient(i)}`).join("\n"),
       steps.length ? `Steps (only for how things are cooked):\n${steps.map((s, i) => `${i + 1}. ${s}`).join("\n")}` : "",
       "",
       "An amount like 600–700 g is a range: use its midpoint. Text in brackets after a name is the kind, cut or variety",
@@ -136,6 +158,12 @@ export async function estimateNutrition(meal: Meal): Promise<NutritionEstimate> 
       .join("\n"),
     temperature: 0,
   });
+
+  // Amounts given in g, kg, ml or l are weighed here, not by the AI, which sometimes mixes up the units.
+  for (const ing of read.ingredients) {
+    const grams = metricGrams(ingredients[ing.line - 1]);
+    if (grams !== null) ing.grams = grams;
+  }
 
   // 2. Find the foods and let the AI pick.
   const parts: Part[] = read.ingredients.flatMap((ing, i) => {
