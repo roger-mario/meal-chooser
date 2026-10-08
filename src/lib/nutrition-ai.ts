@@ -103,8 +103,16 @@ const DENSITY: [RegExp, number][] = [
   [/\b(milk|milch|kefir|yog|joghurt|cream|rahm|sahne)/i, 1.03],
 ];
 
-/** Grams for an amount given in a metric unit (midpoint of a range), or null for kitchen units. */
-export function metricGrams(i: Ingredient | undefined): number | null {
+// Usual weight of one piece, for the pieces where the AI's guesses drift.
+const PIECE: [RegExp, number][] = [
+  [/\b(eggs?|eier?)\b/i, 50],
+  [/\b(bananas?|bananen?)\b/i, 118],
+  [/\b(walnuts?|baumnüsse?)\b/i, 5],
+  [/\b(bell peppers?|peperoni|paprika)\b/i, 120],
+];
+
+/** Grams for an amount in g, kg, ml, l or a common piece (midpoint of a range), or null when the AI should weigh it. */
+export function knownGrams(i: Ingredient | undefined): number | null {
   if (!i?.quantity) return null;
   const q = i.quantityMax ? (i.quantity + i.quantityMax) / 2 : i.quantity;
   const density = DENSITY.find(([re]) => re.test(i.name))?.[1] ?? 1;
@@ -113,6 +121,10 @@ export function metricGrams(i: Ingredient | undefined): number | null {
     case "kg": return q * 1000;
     case "ml": return q * density;
     case "l": return q * 1000 * density;
+    case "pcs": {
+      const piece = PIECE.find(([re]) => re.test(i.name))?.[1];
+      return piece ? q * piece : null;
+    }
     default: return null;
   }
 }
@@ -149,7 +161,7 @@ export async function estimateNutrition(meal: Meal): Promise<NutritionEstimate> 
       "(chicken (breast), rice (jasmine)). Products are bought in Switzerland.",
       "grams: weigh rice, pasta, oats and pulses DRY and meat, fish, eggs and vegetables RAW. Convert kitchen units with:",
       CONVERSIONS,
-      "For water use 0 g. For frying oil, count only what is absorbed/eaten. 'To taste' means a small realistic amount.",
+      "Amounts in g, kg, ml and l are weighed by Otao; don't list them as assumptions. For water use 0 g. For frying oil, count only what is absorbed/eaten. 'To taste' means a small realistic amount.",
       "parts.search: words for the USDA SR Legacy entry in the same state as the grams (raw/dry/as sold, never cooked",
       "for a dry or raw weight). Use the closest standard food when a variety isn't in the table (jasmine rice → rice white",
       "long-grain raw). Split a mixed ingredient into its usual components with shares that add up to 1.",
@@ -159,9 +171,9 @@ export async function estimateNutrition(meal: Meal): Promise<NutritionEstimate> 
     temperature: 0,
   });
 
-  // Amounts given in g, kg, ml or l are weighed here, not by the AI, which sometimes mixes up the units.
+  // Amounts in g, kg, ml or l and common pieces are weighed here, not by the AI, which sometimes mixes up the units.
   for (const ing of read.ingredients) {
-    const grams = metricGrams(ingredients[ing.line - 1]);
+    const grams = knownGrams(ingredients[ing.line - 1]);
     if (grams !== null) ing.grams = grams;
   }
 
