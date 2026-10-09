@@ -86,6 +86,13 @@ export default async function MealPage({ params }: PageProps<"/meals/[id]">) {
         }
       />
 
+      {meal.nutrition && (
+        <section className="card space-y-3 p-4 sm:p-6">
+          <h2 className="text-lg font-semibold">✨ Otao score</h2>
+          <HealthSummary nutrition={meal.nutrition} />
+        </section>
+      )}
+
       <section className="card space-y-4 p-4 sm:p-6">
         <h2 className="text-lg font-semibold">💰 Cost at {COST_STORE}</h2>
         {isOutdated(meal.cost, meal) && <OutdatedNote />}
@@ -119,7 +126,6 @@ export default async function MealPage({ params }: PageProps<"/meals/[id]">) {
         {isOutdated(meal.nutrition, meal) && <OutdatedNote />}
         {meal.nutrition ? (
           <>
-            <HealthSummary nutrition={meal.nutrition} />
             <NutritionPanel
               nutrition={meal.nutrition}
               detailsOpen={nutritionJob.running || !!nutritionJob.error}

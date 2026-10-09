@@ -98,54 +98,53 @@ export function NutritionPanel({
         ))}
       </div>
 
-      {nutrition.source === "manual" && nutrition.summary && <p className="text-sm text-stone-600">{nutrition.summary}</p>}
-
-      <div>
-        <h3 className="mb-1 text-sm font-semibold text-stone-700">
-          Rich in <span className="font-normal text-stone-400">(10%+ of the daily value per serving)</span>
-        </h3>
-        {rich.length ? (
-          <table className="w-full text-sm">
-            <tbody>
-              {rich.map((r) => (
-                <NutrientRow key={r.def.key} {...r} />
-              ))}
-            </tbody>
-          </table>
-        ) : (
-          <p className="text-sm text-stone-500">
-            No vitamin or mineral reaches {RICH_PCT}% of the daily value in one serving
-            {fiber != null ? ` (fiber: ${fmt(fiber, "g")})` : ""}.
-          </p>
-        )}
-      </div>
-
-      {watch.length > 0 && (
-        <div>
-          <h3 className="mb-1 text-sm font-semibold text-stone-700">Keep an eye on</h3>
-          <table className="w-full text-sm">
-            <tbody>
-              {watch.map((r) => {
-                const from = sourcesOf(r.def.key as NutrientKey);
-                return [
-                  <NutrientRow key={r.def.key} {...r} />,
-                  from.length > 0 && (
-                    <tr key={`${r.def.key}-from`}>
-                      <td colSpan={3} className="pb-1.5 text-xs text-stone-500">
-                        Mostly from {from.map((f) => `${f.name} (${Math.round(f.share)}%)`).join(", ")}
-                      </td>
-                    </tr>
-                  ),
-                ];
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
-
       <details open={detailsOpen} className="group rounded-lg border border-stone-200 text-sm">
-        <summary className="cursor-pointer px-4 py-3 font-medium text-stone-700">Details, sources and re-estimate</summary>
+        <summary className="cursor-pointer px-4 py-3 font-medium text-stone-700">Vitamins, minerals and details</summary>
         <div className="space-y-4 border-t border-stone-200 p-4">
+          {nutrition.source === "manual" && nutrition.summary && <p className="text-sm text-stone-600">{nutrition.summary}</p>}
+
+          <div>
+            <h3 className="mb-1 text-sm font-semibold text-stone-700">
+              Rich in <span className="font-normal text-stone-400">(10%+ of the daily value per serving)</span>
+            </h3>
+            {rich.length ? (
+              <table className="w-full text-sm">
+                <tbody>
+                  {rich.map((r) => (
+                    <NutrientRow key={r.def.key} {...r} />
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <p className="text-sm text-stone-500">
+                No vitamin or mineral reaches {RICH_PCT}% of the daily value in one serving
+                {fiber != null ? ` (fiber: ${fmt(fiber, "g")})` : ""}.
+              </p>
+            )}
+          </div>
+
+          {watch.length > 0 && (
+            <div>
+              <h3 className="mb-1 text-sm font-semibold text-stone-700">Keep an eye on</h3>
+              <table className="w-full text-sm">
+                <tbody>
+                  {watch.map((r) => {
+                    const from = sourcesOf(r.def.key as NutrientKey);
+                    return [
+                      <NutrientRow key={r.def.key} {...r} />,
+                      from.length > 0 && (
+                        <tr key={`${r.def.key}-from`}>
+                          <td colSpan={3} className="pb-1.5 text-xs text-stone-500">
+                            Mostly from {from.map((f) => `${f.name} (${Math.round(f.share)}%)`).join(", ")}
+                          </td>
+                        </tr>
+                      ),
+                    ];
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
           {ingredients.length > 0 && (
             <div>
               <p className="mb-1 text-xs text-stone-500">

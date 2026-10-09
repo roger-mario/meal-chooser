@@ -12,10 +12,7 @@ export function HealthSummary({ nutrition }: { nutrition: NutritionEstimate }) {
           <span className="text-xl leading-none font-bold tabular-nums">{health.score}</span>
           <span className="text-[10px] leading-tight opacity-90">/ 100</span>
         </div>
-        <div className="min-w-0">
-          <p className="font-semibold text-stone-900">Otao score: {health.label}</p>
-          <p className="text-xs text-stone-500">How much good nutrition one serving brings, minus salt, saturated fat, added sugar and ultra-processed food.</p>
-        </div>
+        <p className="min-w-0 text-lg font-semibold text-stone-900">{health.label}</p>
       </div>
       {health.badges.length > 0 && (
         <ul className="flex flex-wrap gap-1.5">
@@ -48,6 +45,7 @@ export function HealthSummary({ nutrition }: { nutrition: NutritionEstimate }) {
             ))}
         </ul>
         <p className="mt-2 text-xs text-stone-400">
+          How much good nutrition one serving brings, minus salt, saturated fat, added sugar and ultra-processed food.
           Starts at 20. Protein up to 30 g, fibre up to 10 g, plant variety up to 6 plants and omega-3 up to 1.5 g earn
           points, as do vitamins and minerals the dish is rich in for its calories. Sodium over 600 mg, saturated fat over
           5 g, added sugar over 5 g and ultra-processed ingredients cost points.

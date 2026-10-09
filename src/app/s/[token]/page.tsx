@@ -35,6 +35,12 @@ export default async function SharedMealPage({ params }: PageProps<"/s/[token]">
       </header>
       <main className="pb-safe mx-auto w-full max-w-5xl flex-1 space-y-4 px-4 py-5 sm:space-y-6 sm:py-8">
         <MealView meal={meal} />
+        {meal.nutrition && (
+          <section className="card space-y-3 p-4 sm:p-6">
+            <h2 className="text-lg font-semibold">✨ Otao score</h2>
+            <HealthSummary nutrition={meal.nutrition} />
+          </section>
+        )}
         {meal.cost && meal.cost.items.length > 0 && (
           <section className="card space-y-4 p-4 sm:p-6">
             <h2 className="text-lg font-semibold">💰 Cost at {meal.cost.store}</h2>
@@ -44,7 +50,6 @@ export default async function SharedMealPage({ params }: PageProps<"/s/[token]">
         {meal.nutrition && (
           <section className="card space-y-4 p-4 sm:p-6">
             <h2 className="text-lg font-semibold">🥗 Nutrition per serving</h2>
-            <HealthSummary nutrition={meal.nutrition} />
             <NutritionPanel nutrition={meal.nutrition} />
           </section>
         )}
