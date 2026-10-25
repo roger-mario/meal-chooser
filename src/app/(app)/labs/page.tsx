@@ -29,6 +29,12 @@ const EXPERIMENTS = [
     title: "Public collection & quick picks",
     text: "Make your meals public or keep them private, browse the public recipe collection, and get quick picks from your favourites and the meals you use most.",
   },
+  {
+    href: "/labs/backup",
+    emoji: "💾",
+    title: "Recipe folder & GitHub backup",
+    text: "Your recipes as files (data, a readable page and the photo per recipe). Download them, import them in another Otao, or keep them versioned in your own GitHub repository.",
+  },
 ];
 
 export default async function LabsPage() {

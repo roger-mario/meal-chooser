@@ -13,6 +13,8 @@ export const mealInputSchema = z.object({
   difficulty: z.enum(DIFFICULTIES.map((d) => d.value) as [string, ...string[]]).nullish(),
   diet: z.enum(DIETS.map((d) => d.value) as [string, ...string[]]).nullish(),
   babyFriendly: z.boolean().nullish(),
+  /** Listed in the public recipe collection; private when left out. */
+  isPublic: z.boolean().nullish(),
   /** [{ name, variant?, quantity?, quantityMax?, unit?, staple? }] or plain strings like "200 g rice" or "600-700 g chicken" */
   ingredients: z.array(z.unknown()).max(200).optional(),
   steps: z.array(z.string()).max(200).optional(),

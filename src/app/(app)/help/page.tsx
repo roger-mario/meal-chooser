@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { headers } from "next/headers";
 import { ImportBackupForm } from "@/components/ImportBackupForm";
 import { aiAvailable } from "@/lib/nutrients";
@@ -124,6 +125,10 @@ export default async function HelpPage() {
           </a>
         </p>
         <p className="text-stone-500">Tip: download one every now and then and keep it in your cloud storage.</p>
+        <p className="text-stone-500">
+          New in Labs: a <Link href="/labs/backup" className="underline">recipe folder</Link> with photos, which can also be
+          backed up to your own GitHub repository every night.
+        </p>
         <h3 className="pt-2 font-semibold text-stone-900">Restore from a backup</h3>
         <ImportBackupForm />
       </Section>

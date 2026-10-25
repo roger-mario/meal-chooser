@@ -1,7 +1,7 @@
 import "server-only";
 import { inArray, sql } from "drizzle-orm";
 import { categories, db, mealCategories, meals } from "@/db";
-import { importMealImage } from "./blob";
+import { importMealImage, uploadMealImage } from "./blob";
 import type { CostEstimate } from "./cost";
 import { validEmoji } from "./emoji";
 import { sanitizeIngredients, sanitizeLinks, type Diet, type Difficulty } from "./meal-fields";
@@ -32,15 +32,21 @@ export async function ensureCategories(
   return new Map(rows.map((r) => [r.name.toLowerCase(), r.id]));
 }
 
-export async function createMealFromInput(input: MealInput, categoryIds?: Map<string, number>) {
+/** `photo` (e.g. from a recipe folder) wins over `input.imageUrl`. */
+export async function createMealFromInput(input: MealInput, categoryIds?: Map<string, number>, photo?: File) {
   const ids = categoryIds ?? (await ensureCategories(input.categories ?? []));
   // A photo that can't be fetched shouldn't lose the whole meal.
-  const imageUrl = input.imageUrl
-    ? await importMealImage(input.imageUrl).catch((e) => {
-        console.error("Meal photo import failed", input.imageUrl, e);
+  const imageUrl = photo
+    ? await uploadMealImage(photo).catch((e) => {
+        console.error("Meal photo upload failed", input.name, e);
         return null;
       })
-    : null;
+    : input.imageUrl
+      ? await importMealImage(input.imageUrl).catch((e) => {
+          console.error("Meal photo import failed", input.imageUrl, e);
+          return null;
+        })
+      : null;
   const [meal] = await db()
     .insert(meals)
     .values({
@@ -53,6 +59,7 @@ export async function createMealFromInput(input: MealInput, categoryIds?: Map<st
       difficulty: (input.difficulty as Difficulty) ?? null,
       diet: (input.diet as Diet) ?? null,
       babyFriendly: input.babyFriendly ?? false,
+      isPublic: input.isPublic ?? false,
       ingredients: sanitizeIngredients(input.ingredients ?? []),
       steps: (input.steps ?? []).map((s) => s.trim()).filter(Boolean),
       links: sanitizeLinks(input.links ?? []),
