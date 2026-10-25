@@ -50,6 +50,8 @@ export const meals = pgTable("meals", {
   nutritionJobError: text("nutrition_job_error"),
   /** Secret for the public read-only link /s/<token>; null when not shared. */
   shareToken: text("share_token").unique(),
+  /** Listed in the public recipe collection (/collection). Only the author can change it. */
+  isPublic: boolean("is_public").notNull().default(false),
   authorId: integer("author_id").references(() => users.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
@@ -127,3 +129,34 @@ export const mealLog = pgTable(
 
 export type MealSlot = "breakfast" | "lunch" | "dinner" | "snack";
 export type MealLogEntry = typeof mealLog.$inferSelect;
+
+/** Meals someone starred, shown first in their quick picks. */
+export const mealFavourites = pgTable(
+  "meal_favourites",
+  {
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    mealId: integer("meal_id")
+      .notNull()
+      .references(() => meals.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.mealId] })],
+);
+
+/** How often someone opened a meal, for their quick picks. */
+export const mealViews = pgTable(
+  "meal_views",
+  {
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    mealId: integer("meal_id")
+      .notNull()
+      .references(() => meals.id, { onDelete: "cascade" }),
+    count: integer("count").notNull().default(0),
+    lastAt: timestamp("last_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.mealId] })],
+);

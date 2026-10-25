@@ -57,6 +57,13 @@
       "when": 1791382714328,
       "tag": "0007_labs_meal_log",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1792925628555,
+      "tag": "0008_public_collection",
+      "breakpoints": true
     }
   ]
 }

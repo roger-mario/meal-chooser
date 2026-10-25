@@ -11,6 +11,8 @@ import { formatDay, todayISO } from "@/lib/dates";
 import { parseSort, sortMeals } from "@/lib/meal-sort";
 import { categoryCounts, commentCounts, listCategories, listMeals } from "@/lib/queries";
 import { getCurrentUser } from "@/lib/users";
+import { collectionInApp, quickPicks } from "@/lib/collection";
+import { QuickPicks } from "@/components/collection/QuickPicks";
 
 export const dynamic = "force-dynamic";
 
@@ -33,17 +35,19 @@ export default async function MealsPage({ searchParams }: PageProps<"/">) {
   const variant = ingredient && typeof variantParam === "string" ? variantParam.trim().slice(0, 80) : "";
   const sort = parseSort(sortParam);
   const today = todayISO();
-  const [found, categories, counts, chats, me] = await Promise.all([
+  const [found, categories, counts, chats, me, collection] = await Promise.all([
     listMeals({ categoryId, q: query, ingredient, variant }),
     listCategories(),
     categoryCounts(),
     commentCounts(),
     getCurrentUser(),
+    collectionInApp(),
   ]);
   const meals = sortMeals(found, sort);
+  const filtering = Boolean(query || categoryId || ingredient);
+  const picks = collection && me && !filtering ? await quickPicks(me.id, found) : [];
   // The lists above come from the cache. Wake the database now so opening a meal is quick too.
   after(() => db().execute(sql`select 1`).catch(() => {}));
-  const filtering = Boolean(query || categoryId || ingredient);
   // Keeps the other filters when removing the ingredient (or only its kind).
   const withoutIngredient = (keepIngredient: boolean) => {
     const p = new URLSearchParams();
@@ -75,6 +79,8 @@ export default async function MealsPage({ searchParams }: PageProps<"/">) {
           fallbackHref={categoryId ? `/random?category=${categoryId}` : "/random"}
         />
       </section>
+
+      {picks.length > 0 && <QuickPicks picks={picks} />}
 
       <section className="space-y-3">
         <div className="flex gap-2">

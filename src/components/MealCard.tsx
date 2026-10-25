@@ -13,7 +13,17 @@ function shortDate(d: Date) {
 }
 
 /** A meal in the home grid. Every card has the same layout, whatever details the meal has. */
-export function MealCard({ meal, comments = 0, preload = false }: { meal: MealWithCategories; comments?: number; preload?: boolean }) {
+export function MealCard({
+  meal,
+  comments = 0,
+  preload = false,
+  href = `/meals/${meal.id}`,
+}: {
+  meal: MealWithCategories;
+  comments?: number;
+  preload?: boolean;
+  href?: string;
+}) {
   const minutes = totalMinutes(meal);
   const price = costPerServing(meal.cost, meal.servings);
   const kcal = meal.nutrition?.perServing.calories;
@@ -24,7 +34,7 @@ export function MealCard({ meal, comments = 0, preload = false }: { meal: MealWi
 
   return (
     <Link
-      href={`/meals/${meal.id}`}
+      href={href}
       className="card group flex h-full flex-col overflow-hidden transition hover:-translate-y-0.5 hover:shadow-lg"
     >
       <div className="relative">

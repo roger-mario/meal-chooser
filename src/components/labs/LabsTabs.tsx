@@ -8,6 +8,7 @@ const tabs = [
   { href: "/labs/today", label: "📅 Today" },
   { href: "/labs/week", label: "🗓️ Week" },
   { href: "/labs/shopping", label: "🛒 Shopping" },
+  { href: "/labs/collection", label: "🌍 Collection" },
 ];
 
 export function LabsTabs() {

@@ -2,8 +2,8 @@ import { NextResponse, type NextRequest } from "next/server";
 import { clientIp, isLockedOut, recordFailure } from "@/lib/login-limit";
 import { AUTH_COOKIE, AUTH_COOKIE_MAX_AGE, authToken, passwordMatches } from "@/lib/site-auth";
 
-// Open to everyone: shared meals, their photos and the ingredient pages Bring! imports. The API checks its own key (API_KEY) instead.
-const PUBLIC_PREFIXES = ["/s/", "/api/images/", "/api/v1/", "/api/bring/", "/login"];
+// Open to everyone: shared meals, the public recipe collection, their photos and the ingredient pages Bring! imports. The API checks its own key (API_KEY) instead.
+const PUBLIC_PREFIXES = ["/s/", "/collection", "/api/images/", "/api/v1/", "/api/bring/", "/login"];
 
 /** APP_PASSWORD (if set) protects the site. The password is asked once on /login and remembered in a cookie. */
 export async function proxy(request: NextRequest) {

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { after } from "next/server";
 import { estimateMealCost, estimateMealNutrition } from "@/app/actions/meals";
 import { BringButton } from "@/components/BringButton";
 import { CostForm } from "@/components/CostForm";
@@ -22,6 +23,9 @@ import { currentHour, TIME_ZONE, todayISO } from "@/lib/dates";
 import { labsEnabled } from "@/lib/labs-queries";
 import { AteThisButton } from "@/components/labs/AteThisButton";
 import { getCurrentUser } from "@/lib/users";
+import { canPublish, collectionInApp, isFavourite, recordView } from "@/lib/collection";
+import { FavouriteButton } from "@/components/collection/FavouriteButton";
+import { PublicToggle } from "@/components/collection/PublicToggle";
 
 export const dynamic = "force-dynamic";
 // AI estimates can take a while.
@@ -38,13 +42,17 @@ function OutdatedNote() {
 
 export default async function MealPage({ params }: PageProps<"/meals/[id]">) {
   const { id } = await params;
-  const [meal, messages, me, labs] = await Promise.all([
+  const [meal, messages, me, labs, collection] = await Promise.all([
     getMeal(Number(id)),
     listComments(Number(id)),
     getCurrentUser(),
     labsEnabled(),
+    collectionInApp(),
   ]);
   if (!meal) notFound();
+  // Quick picks learn from what each person opens, also before they turn Labs on.
+  if (me) after(() => recordView(me.id, meal.id).catch(() => {}));
+  const favourite = collection && me ? await isFavourite(me.id, meal.id) : false;
   const ai = aiAvailable();
   const costJob = jobStatus(meal.costJobStartedAt, meal.costJobError);
   const nutritionJob = jobStatus(meal.nutritionJobStartedAt, meal.nutritionJobError);
@@ -81,6 +89,8 @@ export default async function MealPage({ params }: PageProps<"/meals/[id]">) {
             {bringLines(meal.ingredients).length > 0 && (
               <BringButton token={bringToken(meal.id)} servings={meal.servings} />
             )}
+            {collection && me && <FavouriteButton mealId={meal.id} on={favourite} />}
+            {collection && canPublish(meal, me?.id) && <PublicToggle mealId={meal.id} isPublic={meal.isPublic} />}
             {labs && me && <AteThisButton mealId={meal.id} day={todayISO()} hour={currentHour()} />}
           </>
         }

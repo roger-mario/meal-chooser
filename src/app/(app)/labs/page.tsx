@@ -23,6 +23,12 @@ const EXPERIMENTS = [
     title: "One shopping list for many meals",
     text: "Tick a few meals, get one merged list (same ingredients added up, basics left out) and send it to Bring! in one go.",
   },
+  {
+    href: "/labs/collection",
+    emoji: "🌍",
+    title: "Public collection & quick picks",
+    text: "Make your meals public or keep them private, browse the public recipe collection, and get quick picks from your favourites and the meals you use most.",
+  },
 ];
 
 export default async function LabsPage() {
@@ -33,7 +39,7 @@ export default async function LabsPage() {
         New ideas to try before they become part of Otao. They may change or disappear, and nothing here changes your meals.
         Tell us in the chat what works and what doesn&apos;t.
       </p>
-      <ul className="grid gap-3 sm:grid-cols-3">
+      <ul className="grid gap-3 sm:grid-cols-2">
         {EXPERIMENTS.map((e) => (
           <li key={e.href}>
             <Link href={e.href} className="card flex h-full flex-col gap-2 p-4 transition hover:-translate-y-0.5 hover:shadow-md">

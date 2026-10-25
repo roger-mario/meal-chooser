@@ -11,7 +11,7 @@ export function LabsToggle({ on }: { on: boolean }) {
     <label className="flex cursor-pointer items-center justify-between gap-4">
       <span>
         <span className="block font-medium text-stone-900">Show Labs buttons in the app</span>
-        <span className="block text-xs text-stone-500">Adds &quot;Ate this&quot; to meal pages. Only on this device.</span>
+        <span className="block text-xs text-stone-500">Adds &quot;Ate this&quot;, favourites and public/private to meal pages, and quick picks to the home and What can I cook pages. Only on this device.</span>
       </span>
       <input
         type="checkbox"
