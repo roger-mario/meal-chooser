@@ -9,6 +9,7 @@ import {
   serial,
   text,
   timestamp,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 import type { CostEstimate } from "@/lib/cost";
 import type { NutritionEstimate } from "@/lib/nutrients";
@@ -122,6 +123,8 @@ export const mealLog = pgTable(
     label: text("label"),
     portions: real("portions").notNull().default(1),
     planned: boolean("planned").notNull().default(false),
+    /** Planned rows: who said they'll cook it (shown as a small avatar in the shared plan). */
+    cookId: integer("cook_id").references(() => users.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index("meal_log_day_idx").on(t.day)],
@@ -159,4 +162,80 @@ export const mealViews = pgTable(
     lastAt: timestamp("last_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [primaryKey({ columns: [t.userId, t.mealId] })],
+);
+
+/** App sign-in: an Apple, Google or Microsoft account linked to one of the people above. */
+export const userIdentities = pgTable(
+  "user_identities",
+  {
+    id: serial("id").primaryKey(),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    provider: text("provider").$type<AuthProvider>().notNull(),
+    /** The provider's stable account id (`sub`). */
+    subject: text("subject").notNull(),
+    email: text("email"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    lastSignInAt: timestamp("last_sign_in_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("user_identities_provider_subject_idx").on(t.provider, t.subject), index("user_identities_user_idx").on(t.userId)],
+);
+
+export type AuthProvider = "apple" | "google" | "microsoft" | "review";
+
+/** Signed-in app devices. Only a hash of the token is stored, so a database leak can't be used to sign in. */
+export const appSessions = pgTable(
+  "app_sessions",
+  {
+    id: serial("id").primaryKey(),
+    tokenHash: text("token_hash").notNull().unique(),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    lastUsedAt: timestamp("last_used_at", { withTimezone: true }).notNull().defaultNow(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  },
+  (t) => [index("app_sessions_user_idx").on(t.userId)],
+);
+
+/** One-time invite codes: Otao is invite-only, so a new account needs one (unless its email is on APP_ALLOWED_EMAILS). */
+export const appInvites = pgTable("app_invites", {
+  code: text("code").primaryKey(),
+  createdBy: integer("created_by").references(() => users.id, { onDelete: "set null" }),
+  /** Joins this existing person instead of creating a new one, e.g. a second device or provider. */
+  forUserId: integer("for_user_id").references(() => users.id, { onDelete: "cascade" }),
+  usedBy: integer("used_by").references(() => users.id, { onDelete: "set null" }),
+  usedAt: timestamp("used_at", { withTimezone: true }),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+/** Collections someone made themselves ("Weekly meals", "Baby dinner"). */
+export const collections = pgTable(
+  "collections",
+  {
+    id: serial("id").primaryKey(),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("collections_user_idx").on(t.userId)],
+);
+
+export const collectionMeals = pgTable(
+  "collection_meals",
+  {
+    collectionId: integer("collection_id")
+      .notNull()
+      .references(() => collections.id, { onDelete: "cascade" }),
+    mealId: integer("meal_id")
+      .notNull()
+      .references(() => meals.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.collectionId, t.mealId] })],
 );
