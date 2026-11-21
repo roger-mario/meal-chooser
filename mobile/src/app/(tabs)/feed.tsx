@@ -8,7 +8,7 @@ import { Avatar, Button, Dish, Loading, T } from "@/components/ui";
 import { API_URL, type MealSummary } from "@/lib/api";
 import { useData } from "@/lib/data";
 import { useNavSpace } from "@/lib/navbar";
-import { C, tileFor } from "@/lib/theme";
+import { C, chf, tileFor } from "@/lib/theme";
 
 /** Reel-style feed: one recipe per screen, swipe up for the next. */
 export default function Feed() {
@@ -99,6 +99,7 @@ function Reel({ meal, height, topInset, bottomInset, liked, saved, onLike, onSav
           {meal.score != null && <Pill text={`Otao ${meal.score}`} tone="mint" />}
           {meal.minutes != null && <Pill text={`${meal.minutes} min`} />}
           {meal.kcal != null && <Pill text={`${meal.kcal} kcal`} />}
+          {meal.costPerServing != null && <Pill text={chf(meal.costPerServing)!} />}
           <Pill text={`${meal.servings} ${meal.servings === 1 ? "portion" : "portions"}`} />
         </View>
         <Button label="See recipe" size="lg" onPress={() => router.push(`/recipe/${meal.id}`)} />

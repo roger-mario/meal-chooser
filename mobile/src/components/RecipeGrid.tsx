@@ -1,6 +1,7 @@
 import { useRouter } from "expo-router";
 import { Pressable, View } from "react-native";
 import type { MealSummary } from "@/lib/api";
+import { chf } from "@/lib/theme";
 import { Dish, Meta, T } from "./ui";
 
 export function RecipeGrid({ meals, showAuthor }: { meals: MealSummary[]; showAuthor?: boolean }) {
@@ -14,7 +15,7 @@ export function RecipeGrid({ meals, showAuthor }: { meals: MealSummary[]; showAu
             <T w="bold" s={15} numberOfLines={2}>
               {m.name}
             </T>
-            <Meta>{[showAuthor && (m.mine ? "You" : m.author), m.minutes && `${m.minutes} min`, m.score != null && `Otao ${m.score}`].filter(Boolean).join(" · ")}</Meta>
+            <Meta>{[showAuthor && (m.mine ? "You" : m.author), m.minutes && `${m.minutes} min`, chf(m.costPerServing), m.score != null && `Otao ${m.score}`].filter(Boolean).join(" · ")}</Meta>
           </View>
         </Pressable>
       ))}

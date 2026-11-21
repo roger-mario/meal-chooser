@@ -1,5 +1,6 @@
 import "server-only";
 import { bringListToken, bringToken } from "./bring";
+import { COST_STORE, costPerServing, costTotal } from "./cost";
 import { mealHealth } from "./health";
 import { formatIngredient, ingredientName, totalMinutes } from "./meal-fields";
 import { NUTRIENTS, POORLY_TABULATED } from "./nutrients";
@@ -30,8 +31,12 @@ export function mealSummary(m: MealWithCategories, origin: string, meId: number)
     categories: m.categories.map((c) => c.name),
     /** Ingredient names without basics like salt and oil, for "what's at home" matching. */
     ingredients: m.ingredients.filter((i) => !i.staple && i.name.trim()).map((i) => ingredientName(i)),
+    /** Rough cost of one serving in CHF, from the saved price estimate. */
+    costPerServing: money(costPerServing(m.cost, m.servings)),
   };
 }
+
+const money = (v: number | null) => (v == null || !Number.isFinite(v) ? null : Math.round(v * 20) / 20);
 
 const round = (v: number) => (v >= 10 ? Math.round(v) : Math.round(v * 10) / 10);
 
@@ -70,6 +75,16 @@ export function mealDetail(m: MealWithCategories, origin: string, meId: number) 
       : null,
     health: health ? { score: health.score, label: health.label, parts: health.parts, badges: health.badges.map((b) => ({ label: b.label, tone: b.tone, detail: b.detail })) } : null,
     bringUrl: `https://api.getbring.com/rest/bringrecipes/deeplink?${bring}`,
+    cost: m.cost?.items.length
+      ? {
+          currency: "CHF",
+          total: money(costTotal(m.cost)),
+          perServing: money(costPerServing(m.cost, m.servings)),
+          store: m.cost.store || COST_STORE,
+          estimated: m.cost.source !== "manual",
+          items: m.cost.items.map((i) => ({ name: i.name, chf: money(i.chf) })),
+        }
+      : null,
   };
 }
 

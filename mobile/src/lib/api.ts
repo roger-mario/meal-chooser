@@ -82,6 +82,8 @@ export type MealSummary = {
   diet: string | null;
   categories: string[];
   ingredients: string[];
+  /** Rough cost of one portion in CHF, or null when there is no estimate yet. */
+  costPerServing?: number | null;
 };
 
 export type Micro = { key: string; label: string; amount: number; unit: string; pct: number | null; limit: boolean };
@@ -94,6 +96,7 @@ export type MealDetail = MealSummary & {
   nutrition: { kcal: number | null; protein: number | null; carbs: number | null; fat: number | null; fiber: number | null; micros: Micro[]; estimated: boolean } | null;
   health: { score: number; label: string; parts: { label: string; points: number }[]; badges: { label: string; tone: "good" | "watch"; detail: string }[] } | null;
   bringUrl: string;
+  cost?: { currency: string; total: number | null; perServing: number | null; store: string; estimated: boolean; items: { name: string; chf: number | null }[] } | null;
   comments: { id: number; body: string; at: string; author: string | null }[];
 };
 

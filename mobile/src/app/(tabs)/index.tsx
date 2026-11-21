@@ -92,7 +92,7 @@ export default function Home() {
             {prefs.usage === "plan" && <PlanStrip today={today} entries={plan?.entries ?? []} meal={(id) => (id == null ? undefined : meals.find((m) => m.id === id))} onFill={fill} filling={filling} />}
 
             <View style={{ flexGrow: 1 }}>
-              <WaveBanner pill="FOR YOU" title="Otao suggests" text={suggestText} action={{ label: prefs.pantry.length ? "Cook with what’s at home" : "Add what’s at home", onPress: () => router.push("/pantry") }} meals={picks} onPress={() => router.navigate("/feed")}>
+              <WaveBanner pill="FOR YOU" title="Otao suggests" text={suggestText} meals={picks} onPress={() => router.navigate("/feed")}>
                 <View style={{ gap: 12, paddingBottom: bottom }}>
                   <H style={{ marginHorizontal: 16 }}>Your recipes</H>
                   <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingHorizontal: 16 }}>

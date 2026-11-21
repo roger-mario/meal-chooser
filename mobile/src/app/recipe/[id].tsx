@@ -1,6 +1,6 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Linking, Pressable, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Icon } from "@/components/icons";
@@ -11,7 +11,7 @@ import { useData } from "@/lib/data";
 import { addDays, dayLabel, isoDay } from "@/lib/dates";
 import { addToPlan, SLOT_LABEL } from "@/lib/plan";
 import { atHome, usePrefs } from "@/lib/prefs";
-import { C } from "@/lib/theme";
+import { C, chf } from "@/lib/theme";
 
 export default function Recipe() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -25,6 +25,8 @@ export default function Recipe() {
   const [saving, setSaving] = useState(false);
   const [planning, setPlanning] = useState(false);
   const [toast, setToast] = useState("");
+  // Which sections are open. Ingredients start open, the rest start folded so the page feels calm.
+  const [open, setOpen] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     api<MealDetail>(`/meals/${id}`).then(setMeal, (e: Error) => setError(e.message));
@@ -45,16 +47,27 @@ export default function Recipe() {
   const missing = meal.ingredientLines.filter((i) => !i.staple && !atHome(prefs.pantry, i.name)).length;
   const video = meal.links.find((l) => l.video);
 
+  const perPortion = chf(meal.cost?.perServing ?? meal.costPerServing);
+  const facts = [
+    meal.minutes ? { value: `${meal.minutes}`, label: "minutes" } : null,
+    { value: String(meal.servings), label: meal.servings === 1 ? "portion" : "portions" },
+    perPortion ? { value: perPortion.replace("≈ CHF ", ""), label: "CHF / portion" } : null,
+    meal.nutrition?.kcal != null ? { value: String(meal.nutrition.kcal), label: "kcal" } : null,
+  ].filter((f): f is { value: string; label: string } => !!f);
+
   return (
     <View style={{ flex: 1, backgroundColor: C.bg }}>
-      <ScrollView contentContainerStyle={{ paddingBottom: 120 }}>
+      <ScrollView contentContainerStyle={{ paddingBottom: 130 }}>
         <View>
-          <Dish meal={meal} style={{ height: 300 }} radius={0} />
+          <Dish meal={meal} style={{ height: 320 }} radius={0} />
           <Pressable accessibilityRole="button" accessibilityLabel="Back" onPress={() => router.back()} style={{ position: "absolute", top: insets.top + 8, left: 12, width: 44, height: 44, borderRadius: 22, backgroundColor: "#FFFFFF", alignItems: "center", justifyContent: "center" }}>
             <Icon.back />
           </Pressable>
+          <Pressable accessibilityRole="button" accessibilityLabel={liked ? "Unlike" : "Like"} onPress={() => toggleLike(meal.id)} style={{ position: "absolute", top: insets.top + 8, right: 12, width: 44, height: 44, borderRadius: 22, backgroundColor: "#FFFFFF", alignItems: "center", justifyContent: "center" }}>
+            <Icon.heart size={22} fill={liked ? C.like : "none"} color={liked ? C.like : C.ink} />
+          </Pressable>
           {video && (
-            <Pressable accessibilityRole="button" onPress={() => WebBrowser.openBrowserAsync(video.url)} style={{ position: "absolute", right: 12, bottom: 36, height: 36, paddingHorizontal: 14, borderRadius: 18, backgroundColor: "#FFFFFF", flexDirection: "row", alignItems: "center", gap: 8 }}>
+            <Pressable accessibilityRole="button" onPress={() => WebBrowser.openBrowserAsync(video.url)} style={{ position: "absolute", right: 12, bottom: 40, height: 36, paddingHorizontal: 14, borderRadius: 18, backgroundColor: "#FFFFFF", flexDirection: "row", alignItems: "center", gap: 8 }}>
               <Icon.play size={12} />
               <T w="bold" s={14}>
                 Video
@@ -62,144 +75,203 @@ export default function Recipe() {
             </Pressable>
           )}
         </View>
-        <View style={{ marginTop: -24, backgroundColor: C.bg, borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 16, gap: 22 }}>
-          <View style={{ gap: 8 }}>
-            <T w="extrabold" s={28} style={{ letterSpacing: -0.6, lineHeight: 32 }}>
+
+        <View style={{ marginTop: -28, backgroundColor: C.bg, borderTopLeftRadius: 30, borderTopRightRadius: 30, paddingHorizontal: 20, paddingTop: 24, gap: 26 }}>
+          <View style={{ gap: 10 }}>
+            <T w="extrabold" s={27} style={{ letterSpacing: -0.6, lineHeight: 32 }}>
               {meal.name}
             </T>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-              {meal.author && <Avatar name={meal.author} id={meal.author.length} size={26} />}
-              <T s={14} color={C.muted} style={{ flex: 1 }} numberOfLines={1}>
+              {meal.author && <Avatar name={meal.author} id={meal.author.length} size={24} />}
+              <T s={14} color={C.muted}>
+                by{" "}
                 <T w="bold" s={14}>
-                  {meal.mine ? "You" : meal.author ?? "Otao"}
+                  {meal.mine ? "you" : meal.author ?? "Otao"}
                 </T>
-                {[meal.minutes && ` · ${meal.minutes} min`, ` · ${meal.servings} ${meal.servings === 1 ? "portion" : "portions"}`].filter(Boolean).join("")}
               </T>
-              <Pressable accessibilityRole="button" accessibilityLabel={liked ? "Unlike" : "Like"} hitSlop={10} onPress={() => toggleLike(meal.id)}>
-                <Icon.heart fill={liked ? C.like : "none"} color={liked ? C.like : C.ink} />
-              </Pressable>
             </View>
             {meal.description ? (
-              <T s={15} color={C.ink2}>
+              <T s={15} color={C.ink2} style={{ lineHeight: 22 }}>
                 {meal.description}
               </T>
             ) : null}
           </View>
 
-          {meal.health && (
-            <View style={{ flexDirection: "row", gap: 14, alignItems: "center", backgroundColor: C.mint, borderRadius: 20, padding: 14 }}>
-              <View style={{ width: 54, height: 54, borderRadius: 27, backgroundColor: "#FFFFFF", alignItems: "center", justifyContent: "center" }}>
-                <T w="extrabold" s={20} color={C.mintInk}>
-                  {meal.health.score}
+          <View style={{ flexDirection: "row", backgroundColor: C.card, borderRadius: 20, borderWidth: 1, borderColor: C.line, paddingVertical: 14 }}>
+            {facts.map((f, i) => (
+              <View key={f.label} style={{ flex: 1, alignItems: "center", gap: 2, borderLeftWidth: i ? 1 : 0, borderLeftColor: C.sand }}>
+                <T w="extrabold" s={18}>
+                  {f.value}
                 </T>
-              </View>
-              <View style={{ flex: 1, gap: 2 }}>
-                <T w="extrabold" s={16} color="#173F2B">
-                  Otao score · {meal.health.label}
-                </T>
-                <T s={13} color="#173F2B">
-                  {scoreWhy(meal)}
-                </T>
-              </View>
-            </View>
-          )}
-
-          {meal.nutrition && (
-            <View style={{ gap: 12 }}>
-              <H>Nutrition per portion</H>
-              <View style={{ flexDirection: "row", gap: 8 }}>
-                {[
-                  [meal.nutrition.kcal, "kcal", ""],
-                  [meal.nutrition.protein, "protein", "g"],
-                  [meal.nutrition.carbs, "carbs", "g"],
-                  [meal.nutrition.fat, "fat", "g"],
-                ].map(([v, label, unit]) => (
-                  <View key={String(label)} style={{ flex: 1, backgroundColor: C.card, borderWidth: 1, borderColor: C.line, borderRadius: 16, paddingVertical: 10, alignItems: "center" }}>
-                    <T w="extrabold" s={18}>
-                      {v == null ? "–" : `${v}${unit}`}
-                    </T>
-                    <T s={12} color={C.muted}>
-                      {label}
-                    </T>
-                  </View>
-                ))}
-              </View>
-              <View style={{ flexDirection: "row", flexWrap: "wrap", columnGap: 14, rowGap: 12 }}>
-                {shown.map((n) => (
-                  <View key={n.key} style={{ width: "47%", gap: 5 }}>
-                    <View style={{ flexDirection: "row" }}>
-                      <T s={13} style={{ flex: 1 }} numberOfLines={1}>
-                        {n.label}
-                      </T>
-                      <T w="bold" s={13}>
-                        {n.pct ?? "–"}%
-                      </T>
-                    </View>
-                    <View style={{ height: 6, borderRadius: 3, backgroundColor: C.sand }}>
-                      <View style={{ width: `${Math.min(100, n.pct ?? 0)}%`, height: 6, borderRadius: 3, backgroundColor: (n.pct ?? 0) >= 30 ? C.green : C.warn }} />
-                    </View>
-                  </View>
-                ))}
-              </View>
-              {micros.length > 6 && <Button label={allNutrients ? "Show fewer" : `Show all ${micros.length} vitamins and minerals`} kind="secondary" size="sm" onPress={() => setAllNutrients(!allNutrients)} />}
-              <T s={12} color={C.muted}>
-                Share of an adult’s daily need.{meal.nutrition.estimated ? " Estimated from the ingredients." : ""}
-              </T>
-            </View>
-          )}
-
-          <View style={{ gap: 6 }}>
-            <View style={{ flexDirection: "row", alignItems: "center" }}>
-              <H style={{ flex: 1 }}>Ingredients</H>
-              <Button label="Send to Bring" size="sm" icon={<Icon.cart size={16} />} onPress={() => Linking.openURL(meal.bringUrl)} />
-            </View>
-            <T s={13} color={C.muted}>
-              For {meal.servings} {meal.servings === 1 ? "portion" : "portions"}.{prefs.pantry.length ? ` A green dot means it's at home${missing ? `, ${missing} missing` : ""}.` : ""}
-            </T>
-            {meal.ingredientLines.map((i, n) => (
-              <View key={n} style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 11, borderBottomWidth: 1, borderBottomColor: C.line }}>
-                {prefs.pantry.length > 0 && <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: i.staple || atHome(prefs.pantry, i.name) ? C.green : C.lineStrong }} />}
-                <T s={15} style={{ flex: 1 }} color={i.staple ? C.muted : C.ink}>
-                  {i.text}
+                <T s={12} color={C.muted}>
+                  {f.label}
                 </T>
               </View>
             ))}
           </View>
 
-          {meal.steps.length > 0 && (
-            <View style={{ gap: 14 }}>
-              <H>Steps</H>
-              {meal.steps.map((s, n) => (
-                <View key={n} style={{ flexDirection: "row", gap: 12 }}>
-                  <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: C.peach, alignItems: "center", justifyContent: "center" }}>
-                    <T w="extrabold" s={14} color={C.coralInk}>
-                      {n + 1}
-                    </T>
-                  </View>
-                  <T s={15} style={{ flex: 1, lineHeight: 22 }}>
-                    {s}
+          {meal.health && (
+            <Pressable accessibilityRole="button" onPress={() => setOpen((o) => ({ ...o, score: !o.score }))} style={{ backgroundColor: C.mint, borderRadius: 20, padding: 14, gap: 10 }}>
+              <View style={{ flexDirection: "row", gap: 14, alignItems: "center" }}>
+                <View style={{ width: 50, height: 50, borderRadius: 25, backgroundColor: "#FFFFFF", alignItems: "center", justifyContent: "center" }}>
+                  <T w="extrabold" s={19} color={C.mintInk}>
+                    {meal.health.score}
                   </T>
                 </View>
-              ))}
-            </View>
+                <View style={{ flex: 1 }}>
+                  <T w="extrabold" s={16} color="#173F2B">
+                    Otao score · {meal.health.label}
+                  </T>
+                  <T s={13} color="#173F2B">
+                    {open.score ? "Tap to hide" : "Tap to see why"}
+                  </T>
+                </View>
+                <Chevron open={!!open.score} color={C.mintInk} />
+              </View>
+              {open.score && (
+                <T s={14} color="#173F2B" style={{ lineHeight: 20 }}>
+                  {scoreWhy(meal)}
+                </T>
+              )}
+            </Pressable>
           )}
 
-          {meal.comments.length > 0 && (
-            <View style={{ gap: 10 }}>
-              <H>Comments</H>
-              {meal.comments.map((c) => (
-                <View key={c.id} style={{ flexDirection: "row", gap: 10 }}>
-                  <Avatar name={c.author ?? "?"} id={(c.author ?? "").length} size={30} />
-                  <Card style={{ flex: 1, padding: 10, borderRadius: 16 }}>
-                    <T w="bold" s={14}>
-                      {c.author ?? "Someone"}
+          <View>
+            <Section
+              title="Ingredients"
+              summary={`${meal.ingredientLines.length} items${prefs.pantry.length && missing ? ` · ${missing} not at home` : ""}`}
+              open={open.ingredients !== false}
+              onToggle={() => setOpen((o) => ({ ...o, ingredients: o.ingredients === false }))}
+            >
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                <T s={13} color={C.muted} style={{ flex: 1 }}>
+                  For {meal.servings} {meal.servings === 1 ? "portion" : "portions"}.{prefs.pantry.length ? " Green means it’s at home." : ""}
+                </T>
+                <Button label="Send to Bring" size="sm" icon={<Icon.cart size={16} />} onPress={() => Linking.openURL(meal.bringUrl)} />
+              </View>
+              <View>
+                {meal.ingredientLines.map((i, n) => (
+                  <View key={n} style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12, borderTopWidth: n ? 1 : 0, borderTopColor: C.sand }}>
+                    {prefs.pantry.length > 0 && <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: i.staple || atHome(prefs.pantry, i.name) ? C.green : C.lineStrong }} />}
+                    <T s={15} style={{ flex: 1 }} color={i.staple ? C.muted : C.ink}>
+                      {i.text}
                     </T>
-                    <T s={15}>{c.body}</T>
-                  </Card>
+                  </View>
+                ))}
+              </View>
+            </Section>
+
+            {meal.steps.length > 0 && (
+              <Section title="Steps" summary={`${meal.steps.length} ${meal.steps.length === 1 ? "step" : "steps"}`} open={!!open.steps} onToggle={() => setOpen((o) => ({ ...o, steps: !o.steps }))}>
+                <View style={{ gap: 18 }}>
+                  {meal.steps.map((st, n) => (
+                    <View key={n} style={{ flexDirection: "row", gap: 14 }}>
+                      <View style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: C.peach, alignItems: "center", justifyContent: "center" }}>
+                        <T w="extrabold" s={14} color={C.coralInk}>
+                          {n + 1}
+                        </T>
+                      </View>
+                      <T s={15} style={{ flex: 1, lineHeight: 23, paddingTop: 3 }}>
+                        {st}
+                      </T>
+                    </View>
+                  ))}
                 </View>
-              ))}
-            </View>
-          )}
+              </Section>
+            )}
+
+            {meal.nutrition && (
+              <Section
+                title="Nutrition"
+                summary={[meal.nutrition.protein != null && `${meal.nutrition.protein} g protein`, micros.length && `${micros.length} vitamins and minerals`].filter(Boolean).join(" · ")}
+                open={!!open.nutrition}
+                onToggle={() => setOpen((o) => ({ ...o, nutrition: !o.nutrition }))}
+              >
+                <View style={{ flexDirection: "row", gap: 8 }}>
+                  {[
+                    [meal.nutrition.protein, "protein"],
+                    [meal.nutrition.carbs, "carbs"],
+                    [meal.nutrition.fat, "fat"],
+                    [meal.nutrition.fiber, "fibre"],
+                  ].map(([v, label]) => (
+                    <View key={String(label)} style={{ flex: 1, backgroundColor: C.sand, borderRadius: 14, paddingVertical: 10, alignItems: "center" }}>
+                      <T w="extrabold" s={16}>
+                        {v == null ? "–" : `${v} g`}
+                      </T>
+                      <T s={12} color={C.muted}>
+                        {label}
+                      </T>
+                    </View>
+                  ))}
+                </View>
+                <View style={{ flexDirection: "row", flexWrap: "wrap", columnGap: 16, rowGap: 14 }}>
+                  {shown.map((n) => (
+                    <View key={n.key} style={{ width: "46%", gap: 6 }}>
+                      <View style={{ flexDirection: "row" }}>
+                        <T s={13} style={{ flex: 1 }} numberOfLines={1}>
+                          {n.label}
+                        </T>
+                        <T w="bold" s={13}>
+                          {n.pct ?? "–"}%
+                        </T>
+                      </View>
+                      <View style={{ height: 6, borderRadius: 3, backgroundColor: C.sand }}>
+                        <View style={{ width: `${Math.min(100, n.pct ?? 0)}%`, height: 6, borderRadius: 3, backgroundColor: (n.pct ?? 0) >= 30 ? C.green : C.warn }} />
+                      </View>
+                    </View>
+                  ))}
+                </View>
+                {micros.length > 6 && <Button label={allNutrients ? "Show fewer" : `Show all ${micros.length}`} kind="secondary" size="sm" onPress={() => setAllNutrients(!allNutrients)} />}
+                <T s={12} color={C.muted}>
+                  Per portion, as a share of an adult’s daily need.{meal.nutrition.estimated ? " Estimated from the ingredients." : ""}
+                </T>
+              </Section>
+            )}
+
+            {meal.cost && meal.cost.items.length > 0 && (
+              <Section title="Cost" summary={`${perPortion} per portion`} open={!!open.cost} onToggle={() => setOpen((o) => ({ ...o, cost: !o.cost }))}>
+                <View>
+                  {meal.cost.items.map((it, n) => (
+                    <View key={n} style={{ flexDirection: "row", paddingVertical: 9, borderTopWidth: n ? 1 : 0, borderTopColor: C.sand }}>
+                      <T s={14} style={{ flex: 1 }}>
+                        {it.name}
+                      </T>
+                      <T s={14} color={C.muted}>
+                        {it.chf == null ? "–" : it.chf.toFixed(2)}
+                      </T>
+                    </View>
+                  ))}
+                  <View style={{ flexDirection: "row", paddingTop: 10, borderTopWidth: 1, borderTopColor: C.line }}>
+                    <T w="bold" s={14} style={{ flex: 1 }}>
+                      Whole recipe
+                    </T>
+                    <T w="bold" s={14}>
+                      CHF {meal.cost.total?.toFixed(2)}
+                    </T>
+                  </View>
+                </View>
+                <T s={12} color={C.muted}>
+                  {meal.cost.estimated ? `Estimated from regular ${meal.cost.store} prices. Promotions and budget lines are cheaper.` : "Prices you entered."}
+                </T>
+              </Section>
+            )}
+
+            {meal.comments.length > 0 && (
+              <Section title="Comments" summary={String(meal.comments.length)} open={!!open.comments} onToggle={() => setOpen((o) => ({ ...o, comments: !o.comments }))} last>
+                {meal.comments.map((c) => (
+                  <View key={c.id} style={{ flexDirection: "row", gap: 10 }}>
+                    <Avatar name={c.author ?? "?"} id={(c.author ?? "").length} size={30} />
+                    <Card style={{ flex: 1, padding: 12, borderRadius: 16 }}>
+                      <T w="bold" s={14}>
+                        {c.author ?? "Someone"}
+                      </T>
+                      <T s={15}>{c.body}</T>
+                    </Card>
+                  </View>
+                ))}
+              </Section>
+            )}
+          </View>
         </View>
       </ScrollView>
 
@@ -230,6 +302,34 @@ export default function Recipe() {
           }
         }}
       />
+    </View>
+  );
+}
+
+/** A foldable recipe section: a big tappable header with a short summary, and the details below. */
+function Section({ title, summary, open, onToggle, last, children }: { title: string; summary?: string; open: boolean; onToggle: () => void; last?: boolean; children: ReactNode }) {
+  return (
+    <View style={{ borderTopWidth: 1, borderTopColor: C.line, borderBottomWidth: last ? 1 : 0, borderBottomColor: C.line }}>
+      <Pressable accessibilityRole="button" accessibilityState={{ expanded: open }} onPress={onToggle} style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 18 }}>
+        <View style={{ flex: 1, gap: 2 }}>
+          <H>{title}</H>
+          {summary ? (
+            <T s={13} color={C.muted} numberOfLines={1}>
+              {summary}
+            </T>
+          ) : null}
+        </View>
+        <Chevron open={open} />
+      </Pressable>
+      {open && <View style={{ gap: 14, paddingBottom: 22 }}>{children}</View>}
+    </View>
+  );
+}
+
+function Chevron({ open, color = C.muted }: { open: boolean; color?: string }) {
+  return (
+    <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: open ? C.sand : "transparent", alignItems: "center", justifyContent: "center", transform: [{ rotate: open ? "-90deg" : "90deg" }] }}>
+      <Icon.chevron color={color} />
     </View>
   );
 }

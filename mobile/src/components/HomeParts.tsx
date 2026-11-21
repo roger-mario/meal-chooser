@@ -1,11 +1,11 @@
 import { useRouter } from "expo-router";
 import { useRef, useState, type ReactNode } from "react";
-import { Pressable, ScrollView, useWindowDimensions, View, type ScrollViewInstance } from "react-native";
+import { Animated, Pressable, ScrollView, useWindowDimensions, View, type ScrollViewInstance } from "react-native";
 import Svg, { Circle, Ellipse, Path } from "react-native-svg";
 import type { MealSummary, PlanEntry } from "@/lib/api";
 import { addDays, shortDate } from "@/lib/dates";
 import { SLOT_LABEL, SLOT_ORDER } from "@/lib/plan";
-import { C, tileFor } from "@/lib/theme";
+import { C, chf, tileFor } from "@/lib/theme";
 import { Icon } from "./icons";
 import { Button, Dish, Meta, ScoreChip, T } from "./ui";
 
@@ -30,6 +30,11 @@ export function PlanStrip({ today, entries, meal, onFill, filling }: { today: st
   const ref = useRef<ScrollViewInstance>(null);
   const [page, setPage] = useState(0);
   const [heights, setHeights] = useState<number[]>([]);
+  // The dark tab highlight slides along with the cards while you swipe.
+  const [scrollX] = useState(() => new Animated.Value(0));
+  const [tabs, setTabs] = useState<{ x: number; w: number }[]>([]);
+  const step = pageW + 12;
+  const ready = tabs.length === PAGES.length && tabs.every(Boolean);
   const measure = (i: number) => (e: { nativeEvent: { layout: { height: number } } }) => {
     const h = Math.ceil(e.nativeEvent.layout.height);
     setHeights((old) => (old[i] === h ? old : Object.assign([...old], { [i]: h })));
@@ -45,8 +50,32 @@ export function PlanStrip({ today, entries, meal, onFill, filling }: { today: st
   return (
     <View style={{ gap: 12 }}>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 16 }}>
+        {ready && (
+          <Animated.View
+            pointerEvents="none"
+            style={{
+              position: "absolute",
+              left: 0,
+              height: 34,
+              borderRadius: 17,
+              backgroundColor: C.ink,
+              width: scrollX.interpolate({ inputRange: PAGES.map((_, i) => i * step), outputRange: tabs.map((t) => t.w), extrapolate: "clamp" }),
+              transform: [{ translateX: scrollX.interpolate({ inputRange: PAGES.map((_, i) => i * step), outputRange: tabs.map((t) => t.x), extrapolate: "clamp" }) }],
+            }}
+          />
+        )}
         {PAGES.map((p, i) => (
-          <Pressable key={p.key} accessibilityRole="tab" accessibilityState={{ selected: page === i }} onPress={() => go(i)} style={{ height: 34, paddingHorizontal: 14, borderRadius: 17, justifyContent: "center", backgroundColor: page === i ? C.ink : "transparent" }}>
+          <Pressable
+            key={p.key}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: page === i }}
+            onPress={() => go(i)}
+            onLayout={(e) => {
+              const { x, width: w } = e.nativeEvent.layout;
+              setTabs((old) => (old[i]?.x === x && old[i]?.w === w ? old : Object.assign([...old], { [i]: { x, w } })));
+            }}
+            style={{ height: 34, paddingHorizontal: 14, borderRadius: 17, justifyContent: "center", backgroundColor: !ready && page === i ? C.ink : "transparent" }}
+          >
             <T w="bold" s={14} color={page === i ? "#FFFFFF" : C.muted}>
               {p.label}
             </T>
@@ -59,7 +88,7 @@ export function PlanStrip({ today, entries, meal, onFill, filling }: { today: st
           </T>
         </Pressable>
       </View>
-      <ScrollView
+      <Animated.ScrollView
         ref={ref}
         horizontal
         style={heights[page] ? { height: heights[page] } : undefined}
@@ -67,10 +96,13 @@ export function PlanStrip({ today, entries, meal, onFill, filling }: { today: st
         snapToInterval={pageW + 12}
         decelerationRate="fast"
         scrollEventThrottle={32}
-        onScroll={(e) => {
-          const i = Math.round(e.nativeEvent.contentOffset.x / (pageW + 12));
-          if (i !== page && i >= 0 && i < PAGES.length) setPage(i);
-        }}
+        onScroll={Animated.event([{ nativeEvent: { contentOffset: { x: scrollX } } }], {
+          useNativeDriver: false,
+          listener: (e: { nativeEvent: { contentOffset: { x: number } } }) => {
+            const i = Math.round(e.nativeEvent.contentOffset.x / step);
+            if (i !== page && i >= 0 && i < PAGES.length) setPage(i);
+          },
+        })}
         contentContainerStyle={{ gap: 12, paddingHorizontal: 16, alignItems: "flex-start" }}
       >
         {[today, addDays(today, 1)].map((day, idx) => {
@@ -93,7 +125,7 @@ export function PlanStrip({ today, entries, meal, onFill, filling }: { today: st
                         <T w="bold" s={16} numberOfLines={1}>
                           {m?.name ?? e.label ?? "A recipe that was removed"}
                         </T>
-                        {m && <Meta>{[m.minutes && `${m.minutes} min`, m.score != null && `Otao ${m.score}`].filter(Boolean).join(" · ")}</Meta>}
+                        {m && <Meta>{[m.minutes && `${m.minutes} min`, chf(m.costPerServing), m.score != null && `Otao ${m.score}`].filter(Boolean).join(" · ")}</Meta>}
                       </View>
                     </Pressable>
                   );
@@ -131,7 +163,7 @@ export function PlanStrip({ today, entries, meal, onFill, filling }: { today: st
             );
           })}
         </View>
-      </ScrollView>
+      </Animated.ScrollView>
     </View>
   );
 }
@@ -185,7 +217,12 @@ export function WaveBanner({ pill, title, text, action, onPress, meals, children
         )}
       </View>
       <RecipeCarousel meals={meals} />
-      {children && <View style={{ marginTop: 28, backgroundColor: C.bg, borderTopLeftRadius: 32, borderTopRightRadius: 32, paddingTop: 22 }}>{children}</View>}
+      {children && (
+        <View style={{ marginTop: 52, backgroundColor: C.bg, borderTopLeftRadius: 32, borderTopRightRadius: 32, paddingTop: 30, shadowColor: "#1F5A8A", shadowOpacity: 0.08, shadowRadius: 16, shadowOffset: { width: 0, height: -6 } }}>
+          <View style={{ alignSelf: "center", width: 40, height: 5, borderRadius: 3, backgroundColor: C.lineStrong, marginTop: -16, marginBottom: 14 }} />
+          {children}
+        </View>
+      )}
     </View>
   );
 }
@@ -205,7 +242,7 @@ export function RecipeCarousel({ meals }: { meals: MealSummary[] }) {
             <T w="extrabold" s={17} numberOfLines={2} style={{ lineHeight: 22 }}>
               {m.name}
             </T>
-            <Meta>{[m.mine ? "You" : m.author, m.minutes && `${m.minutes} min`].filter(Boolean).join(" · ")}</Meta>
+            <Meta>{[m.mine ? "You" : m.author, m.minutes && `${m.minutes} min`, chf(m.costPerServing)].filter(Boolean).join(" · ")}</Meta>
           </View>
         </Pressable>
       ))}

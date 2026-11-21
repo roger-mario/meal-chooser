@@ -48,3 +48,6 @@ export const initials = (name: string) => {
   const parts = name.trim().split(/\s+/);
   return (parts.length > 1 ? parts[0][0] + parts[1][0] : name.trim().slice(0, 2)).toUpperCase();
 };
+
+/** "≈ CHF 4.50", or null when there is no estimate. */
+export const chf = (v: number | null | undefined) => (v == null ? null : `≈ CHF ${v.toFixed(2)}`);
