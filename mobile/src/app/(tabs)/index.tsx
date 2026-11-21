@@ -1,11 +1,14 @@
 import { useRouter } from "expo-router";
+import * as WebBrowser from "expo-web-browser";
 import { useMemo, useState } from "react";
 import { Pressable, RefreshControl, ScrollView, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { QuickActions, WaveBanner } from "@/components/HomeParts";
 import { Icon } from "@/components/icons";
 import { RecipeGrid } from "@/components/RecipeGrid";
 import { NewCollectionSheet } from "@/components/SaveSheet";
-import { Button, Card, Chip, Dish, Empty, H, Loading, Meta, ScoreChip, T } from "@/components/ui";
+import { Button, Card, Chip, Dish, Empty, H, Loading, Meta, T } from "@/components/ui";
+import { API_URL } from "@/lib/api";
 import { useData } from "@/lib/data";
 import { isoDay, shortDate } from "@/lib/dates";
 import { addToPlan, removeFromPlan, SLOT_LABEL, usePlan } from "@/lib/plan";
@@ -38,8 +41,19 @@ export default function Home() {
     return [...meals].sort((a, b) => Number(liked.has(b.id)) - Number(liked.has(a.id)) || (b.score ?? 0) - (a.score ?? 0)).slice(0, 5);
   }, [meals, library?.likedIds]);
 
+  const spotlight = useMemo(() => {
+    const others = meals.filter((m) => !m.mine).sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
+    if (others.length >= 3) {
+      const names = [...new Set(others.map((m) => m.author).filter((n): n is string => !!n))].slice(0, 3);
+      const who = names.length > 1 ? `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}` : names[0] || "Your friends";
+      return { pill: "NEW", title: "Fresh from your people", text: `${who} shared recipes. See what they’re cooking.`, meals: others.slice(0, 8) };
+    }
+    return { pill: "IDEAS", title: "Ideas for tonight", text: "Recipes you liked and the healthiest picks from your kitchen.", meals: tonight };
+  }, [meals, tonight]);
+
   if (!library) return error ? <ErrorState text={error} onRetry={refresh} /> : <Loading />;
 
+  const firstName = library.me.name.split(" ")[0];
   const todays = (plan?.entries ?? []).filter((e) => e.day === today);
   const readyCount = ideas.filter((i) => i.have === i.total).length;
   const almost = meals.filter((m) => m.ingredients.length && pantryMatch(m, prefs.pantry).missing.length === 1).length;
@@ -61,7 +75,20 @@ export default function Home() {
 
   return (
     <SafeAreaView edges={["top"]} style={{ flex: 1, backgroundColor: C.bg }}>
-      <ScrollView contentContainerStyle={{ paddingTop: 14, paddingBottom: 32, gap: 22 }} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void Promise.all([refresh(), reload()])} tintColor={C.coral} />}>
+      <ScrollView contentContainerStyle={{ paddingTop: 18, paddingBottom: 32, gap: 24 }} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void Promise.all([refresh(), reload()])} tintColor={C.coral} />}>
+        <T w="extrabold" s={26} style={{ marginHorizontal: 16, letterSpacing: -0.5, lineHeight: 32 }}>
+          {todays.length ? `Ready to cook tonight, ${firstName}?` : `What are we cooking today, ${firstName}?`}
+        </T>
+
+        <QuickActions
+          actions={[
+            { label: "At home", bg: C.mint, icon: <Icon.fridge size={28} />, onPress: () => router.push("/pantry") },
+            { label: "Plan week", bg: C.sky, icon: <Icon.plan size={28} color={C.skyInk} />, onPress: () => router.navigate("/plan") },
+            { label: "Discover", bg: C.peach, icon: <Icon.feed size={28} color={C.coralInk} />, onPress: () => router.navigate("/feed") },
+            { label: "Add recipe", bg: C.butter, icon: <Icon.plus size={28} color={C.butterInk} />, onPress: () => void WebBrowser.openBrowserAsync(`${API_URL}/meals/new`) },
+          ]}
+        />
+
         {!prefs.bannerHidden && prefs.likes.length === 0 && (
           <View style={{ marginHorizontal: 16, flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: C.butter, borderRadius: 18, paddingVertical: 12, paddingLeft: 14, paddingRight: 6 }}>
             <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: "#FFFFFF", alignItems: "center", justifyContent: "center" }}>
@@ -81,8 +108,8 @@ export default function Home() {
           </View>
         )}
 
-        {prefs.usage === "plan" ? (
-          todays.length > 0 ? (
+        {prefs.usage === "plan" &&
+          (todays.length > 0 ? (
             <View style={{ paddingHorizontal: 16, gap: 10 }}>
               <View style={{ flexDirection: "row", alignItems: "center" }}>
                 <View style={{ flex: 1, flexDirection: "row", alignItems: "baseline", gap: 8 }}>
@@ -165,51 +192,30 @@ export default function Home() {
                   />
                 </Pressable>
               ))}
-              <View style={{ flexDirection: "row", gap: 10 }}>
-                <Button label="Fill for me" icon={<Icon.sparkle color={C.ink} />} busy={busy} onPress={fillToday} style={{ flex: 1 }} />
-                <Button label="What's at home" kind="secondary" onPress={() => router.push("/pantry")} style={{ flex: 1 }} />
-              </View>
+              <Button label="Fill for me" icon={<Icon.sparkle color={C.ink} />} busy={busy} onPress={fillToday} />
             </Card>
-          )
-        ) : (
-          <>
-            <View style={{ gap: 10 }}>
-              <H style={{ marginHorizontal: 16 }}>Ideas for tonight</H>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12, paddingHorizontal: 16 }}>
-                {tonight.map((m) => (
-                  <Pressable key={m.id} accessibilityRole="button" onPress={() => router.push(`/recipe/${m.id}`)} style={{ width: 220, backgroundColor: C.card, borderRadius: 20, overflow: "hidden", borderWidth: 1, borderColor: C.line }}>
-                    <Dish meal={m} style={{ height: 150 }} radius={0} />
-                    <ScoreChip score={m.score} style={{ position: "absolute", left: 10, top: 10 }} />
-                    <View style={{ padding: 12, paddingTop: 10 }}>
-                      <T w="bold" s={15} numberOfLines={1}>
-                        {m.name}
-                      </T>
-                      <Meta>
-                        {[m.minutes && `${m.minutes} min`, library.likedIds.includes(m.id) && "you liked it"].filter(Boolean).join(" · ")}
-                      </Meta>
-                    </View>
-                  </Pressable>
-                ))}
-              </ScrollView>
+          ))}
+
+        {spotlight.meals.length > 0 && <WaveBanner pill={spotlight.pill} title={spotlight.title} text={spotlight.text} meals={spotlight.meals} onPress={() => router.navigate("/feed")} />}
+
+        {prefs.usage !== "plan" && (
+          <Pressable accessibilityRole="button" onPress={() => router.push("/pantry")} style={{ marginHorizontal: 16, flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: C.mint, borderRadius: 18, padding: 14 }}>
+            <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: "#FFFFFF", alignItems: "center", justifyContent: "center" }}>
+              <Icon.fridge />
             </View>
-            <Pressable accessibilityRole="button" onPress={() => router.push("/pantry")} style={{ marginHorizontal: 16, flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: C.mint, borderRadius: 18, padding: 14 }}>
-              <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: "#FFFFFF", alignItems: "center", justifyContent: "center" }}>
-                <Icon.fridge />
-              </View>
-              <View style={{ flex: 1 }}>
-                <T w="extrabold" s={16} color="#173F2B">
-                  Cook with what you have
-                </T>
-                <T s={13} color="#173F2B">
-                  {prefs.pantry.length === 0
-                    ? "Tell Otao what's in your kitchen"
-                    : readyCount
-                      ? `${prefs.pantry.length} items at home · ${readyCount} ready to cook`
-                      : `${prefs.pantry.length} items at home · ${almost} need just one more thing`}
-                </T>
-              </View>
-            </Pressable>
-          </>
+            <View style={{ flex: 1 }}>
+              <T w="extrabold" s={16} color="#173F2B">
+                Cook with what you have
+              </T>
+              <T s={13} color="#173F2B">
+                {prefs.pantry.length === 0
+                  ? "Tell Otao what's in your kitchen"
+                  : readyCount
+                    ? `${prefs.pantry.length} items at home · ${readyCount} ready to cook`
+                    : `${prefs.pantry.length} items at home · ${almost} need just one more thing`}
+              </T>
+            </View>
+          </Pressable>
         )}
 
         <View style={{ marginHorizontal: 16, justifyContent: "center" }}>
