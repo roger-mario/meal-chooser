@@ -1,18 +1,17 @@
 import { useRouter } from "expo-router";
-import * as WebBrowser from "expo-web-browser";
 import { useMemo, useState } from "react";
 import { Pressable, RefreshControl, ScrollView, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { QuickActions, WaveBanner } from "@/components/HomeParts";
+import { PlanStrip, WaveBanner } from "@/components/HomeParts";
 import { Icon } from "@/components/icons";
 import { RecipeGrid } from "@/components/RecipeGrid";
 import { NewCollectionSheet } from "@/components/SaveSheet";
-import { Button, Card, Chip, Dish, Empty, H, Loading, Meta, T } from "@/components/ui";
-import { API_URL } from "@/lib/api";
+import { Button, Chip, Dish, Empty, H, Loading, T } from "@/components/ui";
 import { useData } from "@/lib/data";
-import { isoDay, shortDate } from "@/lib/dates";
-import { addToPlan, removeFromPlan, SLOT_LABEL, usePlan } from "@/lib/plan";
+import { addDays, isoDay } from "@/lib/dates";
+import { addToPlan, usePlan } from "@/lib/plan";
 import { pantryMatch, usePrefs } from "@/lib/prefs";
+import { suggestFor } from "@/lib/taste";
 import { C, F } from "@/lib/theme";
 
 type Lib = "mine" | "liked" | "colls";
@@ -22,211 +21,57 @@ export default function Home() {
   const { library, refresh, refreshing, error } = useData();
   const { prefs, update } = usePrefs();
   const today = isoDay();
-  const { plan, reload } = usePlan(today, today);
+  const { plan, reload } = usePlan(today, addDays(today, 6));
   const [lib, setLib] = useState<Lib>("mine");
-  const [editing, setEditing] = useState(false);
-  const [busy, setBusy] = useState(false);
+  const [filling, setFilling] = useState<string | null>(null);
   const [query, setQuery] = useState("");
 
   const meals = useMemo(() => library?.meals ?? [], [library]);
-  const ideas = useMemo(() => {
-    const scored = meals
-      .filter((m) => m.ingredients.length > 0)
-      .map((m) => ({ m, ...pantryMatch(m, prefs.pantry) }))
-      .sort((a, b) => b.have / b.total - a.have / a.total || (b.m.score ?? 0) - (a.m.score ?? 0));
-    return scored.slice(0, 3);
-  }, [meals, prefs.pantry]);
-  const tonight = useMemo(() => {
-    const liked = new Set(library?.likedIds);
-    return [...meals].sort((a, b) => Number(liked.has(b.id)) - Number(liked.has(a.id)) || (b.score ?? 0) - (a.score ?? 0)).slice(0, 5);
-  }, [meals, library?.likedIds]);
-
-  const spotlight = useMemo(() => {
-    const others = meals.filter((m) => !m.mine).sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
-    if (others.length >= 3) {
-      const names = [...new Set(others.map((m) => m.author).filter((n): n is string => !!n))].slice(0, 3);
-      const who = names.length > 1 ? `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}` : names[0] || "Your friends";
-      return { pill: "NEW", title: "Fresh from your people", text: `${who} shared recipes. See what they’re cooking.`, meals: others.slice(0, 8) };
-    }
-    return { pill: "IDEAS", title: "Ideas for tonight", text: "Recipes you liked and the healthiest picks from your kitchen.", meals: tonight };
-  }, [meals, tonight]);
+  const picks = useMemo(() => suggestFor(meals, prefs.likes, prefs.avoid, library?.likedIds ?? []), [meals, prefs.likes, prefs.avoid, library?.likedIds]);
 
   if (!library) return error ? <ErrorState text={error} onRetry={refresh} /> : <Loading />;
 
   const firstName = library.me.name.split(" ")[0];
-  const todays = (plan?.entries ?? []).filter((e) => e.day === today);
-  const readyCount = ideas.filter((i) => i.have === i.total).length;
-  const almost = meals.filter((m) => m.ingredients.length && pantryMatch(m, prefs.pantry).missing.length === 1).length;
   const libMeals = lib === "liked" ? meals.filter((m) => library.likedIds.includes(m.id)) : meals.filter((m) => m.mine);
   const q = query.trim().toLowerCase();
   const found = q ? meals.filter((m) => [m.name, m.author ?? "", ...m.ingredients, ...m.categories].some((t) => t.toLowerCase().includes(q))).sort((a, b) => Number(a.mine) - Number(b.mine) || (b.score ?? 0) - (a.score ?? 0)) : [];
+  const likes = prefs.likes.slice(0, 2).map((l) => l.toLowerCase());
+  const suggestText = likes.length ? `Picked for you, because you like ${likes.join(" and ")}.` : "Healthy picks to get you started. They get better as Otao learns what you like.";
 
-  async function fillToday() {
-    const best = ideas[0]?.m ?? tonight[0];
+  async function fill(day: string) {
+    const planned = new Set((plan?.entries ?? []).map((e) => e.mealId));
+    const ranked = meals.filter((m) => m.ingredients.length).sort((a, b) => {
+      const pa = pantryMatch(a, prefs.pantry), pb = pantryMatch(b, prefs.pantry);
+      return pb.have / pb.total - pa.have / pa.total;
+    });
+    const best = [...picks, ...ranked].find((m) => !planned.has(m.id));
     if (!best) return;
-    setBusy(true);
+    setFilling(day);
     try {
-      await addToPlan(today, "dinner", best.id);
+      await addToPlan(day, "dinner", best.id);
       await reload();
     } finally {
-      setBusy(false);
+      setFilling(null);
     }
   }
 
   return (
     <SafeAreaView edges={["top"]} style={{ flex: 1, backgroundColor: C.bg }}>
-      <ScrollView contentContainerStyle={{ paddingTop: 18, paddingBottom: 32, gap: 24 }} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void Promise.all([refresh(), reload()])} tintColor={C.coral} />}>
-        <T w="extrabold" s={26} style={{ marginHorizontal: 16, letterSpacing: -0.5, lineHeight: 32 }}>
-          {todays.length ? `Ready to cook tonight, ${firstName}?` : `What are we cooking today, ${firstName}?`}
-        </T>
-
-        <QuickActions
-          actions={[
-            { label: "At home", bg: C.mint, icon: <Icon.fridge size={28} />, onPress: () => router.push("/pantry") },
-            { label: "Plan week", bg: C.sky, icon: <Icon.plan size={28} color={C.skyInk} />, onPress: () => router.navigate("/plan") },
-            { label: "Discover", bg: C.peach, icon: <Icon.feed size={28} color={C.coralInk} />, onPress: () => router.navigate("/feed") },
-            { label: "Add recipe", bg: C.butter, icon: <Icon.plus size={28} color={C.butterInk} />, onPress: () => void WebBrowser.openBrowserAsync(`${API_URL}/meals/new`) },
-          ]}
-        />
-
-        {!prefs.bannerHidden && prefs.likes.length === 0 && (
-          <View style={{ marginHorizontal: 16, flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: C.butter, borderRadius: 18, paddingVertical: 12, paddingLeft: 14, paddingRight: 6 }}>
-            <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: "#FFFFFF", alignItems: "center", justifyContent: "center" }}>
-              <Icon.sun />
+      <ScrollView contentContainerStyle={{ paddingTop: 14, gap: 20, flexGrow: 1 }} keyboardShouldPersistTaps="handled" refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void Promise.all([refresh(), reload()])} tintColor={C.coral} />}>
+        <View style={{ paddingHorizontal: 16, gap: 12 }}>
+          <T w="extrabold" s={22} numberOfLines={1} style={{ letterSpacing: -0.4, lineHeight: 28 }}>
+            What’s cooking, {firstName}?
+          </T>
+          <View style={{ justifyContent: "center" }}>
+            <View style={{ position: "absolute", left: 16, zIndex: 1 }} pointerEvents="none">
+              <Icon.search />
             </View>
-            <Pressable accessibilityRole="button" style={{ flex: 1 }} onPress={() => router.push("/onboarding?step=2")}>
-              <T s={14} color="#4A3A00">
-                <T w="bold" s={14} color="#4A3A00">
-                  Tell Otao what you like
-                </T>{" "}
-                and ideas will fit you better.
-              </T>
-            </Pressable>
-            <Pressable accessibilityRole="button" accessibilityLabel="Dismiss" hitSlop={8} onPress={() => update({ bannerHidden: true })} style={{ width: 36, height: 36, alignItems: "center", justifyContent: "center" }}>
-              <Icon.close color={C.butterInk} />
-            </Pressable>
+            <TextInput value={query} onChangeText={setQuery} placeholder="Search recipes from others" placeholderTextColor={C.off} returnKeyType="search" autoCorrect={false} clearButtonMode="while-editing" accessibilityLabel="Search recipes" style={{ height: 48, borderRadius: 24, borderWidth: 1, borderColor: C.lineStrong, backgroundColor: C.card, paddingLeft: 44, paddingRight: 16, fontSize: 16, fontFamily: F.regular, color: C.ink }} />
           </View>
-        )}
-
-        {prefs.usage === "plan" &&
-          (todays.length > 0 ? (
-            <View style={{ paddingHorizontal: 16, gap: 10 }}>
-              <View style={{ flexDirection: "row", alignItems: "center" }}>
-                <View style={{ flex: 1, flexDirection: "row", alignItems: "baseline", gap: 8 }}>
-                  <H>Today</H>
-                  <T w="semibold" s={13} color={C.muted}>
-                    {shortDate()}
-                  </T>
-                </View>
-                <Pressable accessibilityRole="button" onPress={() => setEditing(!editing)} hitSlop={8}>
-                  <T w="bold" s={14} color={C.coralInk}>
-                    {editing ? "Done" : "Edit"}
-                  </T>
-                </Pressable>
-              </View>
-              {todays.map((e) => {
-                const m = library.meals.find((x) => x.id === e.mealId);
-                return (
-                  <Card key={e.id} onPress={m && !editing ? () => router.push(`/recipe/${m.id}`) : undefined} style={{ flexDirection: "row", alignItems: "center", gap: 12, padding: 8 }}>
-                    {m ? <Dish meal={m} style={{ width: 64, height: 64 }} /> : <View style={{ width: 64, height: 64, borderRadius: 14, backgroundColor: C.sand }} />}
-                    <View style={{ flex: 1 }}>
-                      <T w="bold" s={12} color={C.muted} style={{ letterSpacing: 0.4 }}>
-                        {SLOT_LABEL[e.slot].toUpperCase()}
-                      </T>
-                      <T w="bold" s={17} numberOfLines={1}>
-                        {m?.name ?? e.label ?? "A recipe that was removed"}
-                      </T>
-                      {m && (
-                        <Meta>
-                          {m.minutes ? `${m.minutes} min` : ""}
-                          {m.score != null ? ` · Otao ${m.score}` : ""}
-                        </Meta>
-                      )}
-                    </View>
-                    {editing && (
-                      <Pressable
-                        accessibilityRole="button"
-                        accessibilityLabel={`Remove ${m?.name ?? e.label}`}
-                        onPress={async () => {
-                          await removeFromPlan(e.id);
-                          await reload();
-                        }}
-                        style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: C.blush, alignItems: "center", justifyContent: "center" }}
-                      >
-                        <Icon.close color={C.coralInk} />
-                      </Pressable>
-                    )}
-                  </Card>
-                );
-              })}
-            </View>
-          ) : (
-            <Card style={{ marginHorizontal: 16, gap: 12 }}>
-              <View style={{ gap: 2 }}>
-                <T w="extrabold" s={19}>
-                  Nothing planned today
-                </T>
-                <T s={14} color={C.muted}>
-                  {prefs.pantry.length ? "Here are ideas that use what you have at home." : "Here are a few ideas. Add what's at home for better ones."}
-                </T>
-              </View>
-              {ideas.map(({ m, have, total }) => (
-                <Pressable key={m.id} accessibilityRole="button" onPress={() => router.push(`/recipe/${m.id}`)} style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-                  <Dish meal={m} style={{ width: 52, height: 52 }} radius={12} />
-                  <View style={{ flex: 1 }}>
-                    <T w="bold" s={15} numberOfLines={1}>
-                      {m.name}
-                    </T>
-                    <T w="semibold" s={13} color={prefs.pantry.length ? C.mintInk : C.muted}>
-                      {prefs.pantry.length ? `${have} of ${total} at home` : [m.minutes && `${m.minutes} min`, m.score != null && `Otao ${m.score}`].filter(Boolean).join(" · ")}
-                    </T>
-                  </View>
-                  <Button
-                    label="Today"
-                    kind="secondary"
-                    size="sm"
-                    onPress={async () => {
-                      await addToPlan(today, "dinner", m.id);
-                      await reload();
-                    }}
-                  />
-                </Pressable>
-              ))}
-              <Button label="Fill for me" icon={<Icon.sparkle color={C.ink} />} busy={busy} onPress={fillToday} />
-            </Card>
-          ))}
-
-        {spotlight.meals.length > 0 && <WaveBanner pill={spotlight.pill} title={spotlight.title} text={spotlight.text} meals={spotlight.meals} onPress={() => router.navigate("/feed")} />}
-
-        {prefs.usage !== "plan" && (
-          <Pressable accessibilityRole="button" onPress={() => router.push("/pantry")} style={{ marginHorizontal: 16, flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: C.mint, borderRadius: 18, padding: 14 }}>
-            <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: "#FFFFFF", alignItems: "center", justifyContent: "center" }}>
-              <Icon.fridge />
-            </View>
-            <View style={{ flex: 1 }}>
-              <T w="extrabold" s={16} color="#173F2B">
-                Cook with what you have
-              </T>
-              <T s={13} color="#173F2B">
-                {prefs.pantry.length === 0
-                  ? "Tell Otao what's in your kitchen"
-                  : readyCount
-                    ? `${prefs.pantry.length} items at home · ${readyCount} ready to cook`
-                    : `${prefs.pantry.length} items at home · ${almost} need just one more thing`}
-              </T>
-            </View>
-          </Pressable>
-        )}
-
-        <View style={{ marginHorizontal: 16, justifyContent: "center" }}>
-          <View style={{ position: "absolute", left: 16, zIndex: 1 }} pointerEvents="none">
-            <Icon.search />
-          </View>
-          <TextInput value={query} onChangeText={setQuery} placeholder="Search recipes from others" placeholderTextColor={C.off} returnKeyType="search" autoCorrect={false} clearButtonMode="while-editing" accessibilityLabel="Search recipes" style={{ height: 48, borderRadius: 24, borderWidth: 1, borderColor: C.lineStrong, backgroundColor: C.card, paddingLeft: 44, paddingRight: 16, fontSize: 16, fontFamily: F.regular, color: C.ink }} />
         </View>
 
         {q ? (
-          <View style={{ gap: 12 }}>
+          <View style={{ gap: 12, paddingBottom: 32 }}>
             <H style={{ marginHorizontal: 16 }}>{found.length ? `${found.length} ${found.length === 1 ? "recipe" : "recipes"}` : "No recipes found"}</H>
             {found.length ? (
               <RecipeGrid meals={found} showAuthor />
@@ -237,25 +82,53 @@ export default function Home() {
             )}
           </View>
         ) : (
-          <View style={{ gap: 12 }}>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingHorizontal: 16 }}>
-              <Chip label="My recipes" tone="dark" on={lib === "mine"} onPress={() => setLib("mine")} />
-              <Chip label="Liked" tone="dark" on={lib === "liked"} onPress={() => setLib("liked")} />
-              <Chip label="Collections" tone="dark" on={lib === "colls"} onPress={() => setLib("colls")} />
-            </ScrollView>
-            {lib === "colls" ? (
-              <Collections />
-            ) : libMeals.length ? (
-              <RecipeGrid meals={libMeals} />
-            ) : (
-              <View style={{ paddingHorizontal: 16 }}>
-                <Empty
-                  title={lib === "liked" ? "Nothing liked yet" : "No recipes of your own yet"}
-                  text={lib === "liked" ? "Tap the heart on any recipe in the feed and it shows up here." : "Add your first recipe with the + button."}
-                />
+          <>
+            {!prefs.bannerHidden && prefs.likes.length === 0 && (
+              <View style={{ marginHorizontal: 16, flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: C.butter, borderRadius: 18, paddingVertical: 12, paddingLeft: 14, paddingRight: 6 }}>
+                <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: "#FFFFFF", alignItems: "center", justifyContent: "center" }}>
+                  <Icon.sun />
+                </View>
+                <Pressable accessibilityRole="button" style={{ flex: 1 }} onPress={() => router.push("/onboarding?step=2")}>
+                  <T s={14} color="#4A3A00">
+                    <T w="bold" s={14} color="#4A3A00">
+                      Tell Otao what you like
+                    </T>{" "}
+                    and ideas will fit you better.
+                  </T>
+                </Pressable>
+                <Pressable accessibilityRole="button" accessibilityLabel="Dismiss" hitSlop={8} onPress={() => update({ bannerHidden: true })} style={{ width: 36, height: 36, alignItems: "center", justifyContent: "center" }}>
+                  <Icon.close color={C.butterInk} />
+                </Pressable>
               </View>
             )}
-          </View>
+
+            {prefs.usage === "plan" && <PlanStrip today={today} entries={plan?.entries ?? []} meal={(id) => (id == null ? undefined : meals.find((m) => m.id === id))} onFill={fill} filling={filling} />}
+
+            <View style={{ flexGrow: 1 }}>
+              <WaveBanner pill="FOR YOU" title="Otao suggests" text={suggestText} action={{ label: prefs.pantry.length ? "Cook with what’s at home" : "Add what’s at home", onPress: () => router.push("/pantry") }} meals={picks} onPress={() => router.navigate("/feed")}>
+                <View style={{ gap: 12, paddingBottom: 32 }}>
+                  <H style={{ marginHorizontal: 16 }}>Your recipes</H>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingHorizontal: 16 }}>
+                    <Chip label="Mine" tone="dark" on={lib === "mine"} onPress={() => setLib("mine")} />
+                    <Chip label="Liked" tone="dark" on={lib === "liked"} onPress={() => setLib("liked")} />
+                    <Chip label="Collections" tone="dark" on={lib === "colls"} onPress={() => setLib("colls")} />
+                  </ScrollView>
+                  {lib === "colls" ? (
+                    <Collections />
+                  ) : libMeals.length ? (
+                    <RecipeGrid meals={libMeals} />
+                  ) : (
+                    <View style={{ paddingHorizontal: 16 }}>
+                      <Empty
+                        title={lib === "liked" ? "Nothing liked yet" : "No recipes of your own yet"}
+                        text={lib === "liked" ? "Tap the heart on any recipe in the feed and it shows up here." : "Add your first recipe with the + button."}
+                      />
+                    </View>
+                  )}
+                </View>
+              </WaveBanner>
+            </View>
+          </>
         )}
       </ScrollView>
     </SafeAreaView>
