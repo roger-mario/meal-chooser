@@ -15,12 +15,9 @@ export function dayLabel(iso: string, today: string) {
   if (iso === addDays(today, 1)) return "Tomorrow";
   return new Date(`${iso}T12:00:00`).toLocaleDateString("en-GB", { weekday: "long", day: "numeric" });
 }
-export function longDate(d = new Date()) {
-  return d.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" });
-}
-export function greeting(d = new Date()) {
-  const h = d.getHours();
-  return h < 11 ? "Good morning" : h < 17 ? "Hello" : "Good evening";
+/** A short date like "21 Nov". */
+export function shortDate(d = new Date()) {
+  return d.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
 }
 export function monthDays(iso: string) {
   const d = new Date(`${iso}T12:00:00`);

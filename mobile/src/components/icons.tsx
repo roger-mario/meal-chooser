@@ -33,6 +33,12 @@ export const Icon = {
       <Path d="M12 5v14M5 12h14" />
     </Svg>
   ),
+  search: ({ size = 20, color = C.muted, width = 2.1 }: P) => (
+    <Svg {...base(size)} fill="none" stroke={color} strokeWidth={width} strokeLinecap="round">
+      <Circle cx="11" cy="11" r="6.5" />
+      <Path d="m16 16 4 4" />
+    </Svg>
+  ),
   back: ({ size = 22, color = C.ink, width = 2.2 }: P) => (
     <Svg {...base(size)} fill="none" stroke={color} strokeWidth={width} strokeLinecap="round" strokeLinejoin="round">
       <Path d="M15 5l-7 7 7 7" />

@@ -1,23 +1,21 @@
 import { useRouter } from "expo-router";
 import { useMemo, useState } from "react";
-import { Pressable, RefreshControl, ScrollView, View } from "react-native";
+import { Pressable, RefreshControl, ScrollView, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Icon } from "@/components/icons";
 import { RecipeGrid } from "@/components/RecipeGrid";
 import { NewCollectionSheet } from "@/components/SaveSheet";
-import { Avatar, Button, Card, Chip, Dish, Empty, H, Loading, Meta, ScoreChip, T } from "@/components/ui";
-import { useAuth } from "@/lib/auth";
+import { Button, Card, Chip, Dish, Empty, H, Loading, Meta, ScoreChip, T } from "@/components/ui";
 import { useData } from "@/lib/data";
-import { greeting, isoDay, longDate } from "@/lib/dates";
+import { isoDay, shortDate } from "@/lib/dates";
 import { addToPlan, removeFromPlan, SLOT_LABEL, usePlan } from "@/lib/plan";
 import { pantryMatch, usePrefs } from "@/lib/prefs";
-import { C } from "@/lib/theme";
+import { C, F } from "@/lib/theme";
 
 type Lib = "mine" | "liked" | "colls";
 
 export default function Home() {
   const router = useRouter();
-  const { me } = useAuth();
   const { library, refresh, refreshing, error } = useData();
   const { prefs, update } = usePrefs();
   const today = isoDay();
@@ -25,6 +23,7 @@ export default function Home() {
   const [lib, setLib] = useState<Lib>("mine");
   const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [query, setQuery] = useState("");
 
   const meals = useMemo(() => library?.meals ?? [], [library]);
   const ideas = useMemo(() => {
@@ -45,7 +44,8 @@ export default function Home() {
   const readyCount = ideas.filter((i) => i.have === i.total).length;
   const almost = meals.filter((m) => m.ingredients.length && pantryMatch(m, prefs.pantry).missing.length === 1).length;
   const libMeals = lib === "liked" ? meals.filter((m) => library.likedIds.includes(m.id)) : meals.filter((m) => m.mine);
-  const cook = todays.find((e) => e.cook && e.cookId !== me?.id);
+  const q = query.trim().toLowerCase();
+  const found = q ? meals.filter((m) => [m.name, m.author ?? "", ...m.ingredients, ...m.categories].some((t) => t.toLowerCase().includes(q))).sort((a, b) => Number(a.mine) - Number(b.mine) || (b.score ?? 0) - (a.score ?? 0)) : [];
 
   async function fillToday() {
     const best = ideas[0]?.m ?? tonight[0];
@@ -62,20 +62,6 @@ export default function Home() {
   return (
     <SafeAreaView edges={["top"]} style={{ flex: 1, backgroundColor: C.bg }}>
       <ScrollView contentContainerStyle={{ paddingTop: 14, paddingBottom: 32, gap: 22 }} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void Promise.all([refresh(), reload()])} tintColor={C.coral} />}>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16 }}>
-          <View style={{ flex: 1 }}>
-            <T w="semibold" s={13} color={C.muted}>
-              {longDate()}
-            </T>
-            <T w="extrabold" s={26} style={{ letterSpacing: -0.5, lineHeight: 31 }}>
-              {greeting()}, {library.me.name}
-            </T>
-          </View>
-          <Pressable accessibilityRole="button" accessibilityLabel="You" onPress={() => router.navigate("/you")}>
-            <Avatar name={library.me.name} id={library.me.id} size={44} />
-          </Pressable>
-        </View>
-
         {!prefs.bannerHidden && prefs.likes.length === 0 && (
           <View style={{ marginHorizontal: 16, flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: C.butter, borderRadius: 18, paddingVertical: 12, paddingLeft: 14, paddingRight: 6 }}>
             <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: "#FFFFFF", alignItems: "center", justifyContent: "center" }}>
@@ -99,7 +85,12 @@ export default function Home() {
           todays.length > 0 ? (
             <View style={{ paddingHorizontal: 16, gap: 10 }}>
               <View style={{ flexDirection: "row", alignItems: "center" }}>
-                <H style={{ flex: 1 }}>Today</H>
+                <View style={{ flex: 1, flexDirection: "row", alignItems: "baseline", gap: 8 }}>
+                  <H>Today</H>
+                  <T w="semibold" s={13} color={C.muted}>
+                    {shortDate()}
+                  </T>
+                </View>
                 <Pressable accessibilityRole="button" onPress={() => setEditing(!editing)} hitSlop={8}>
                   <T w="bold" s={14} color={C.coralInk}>
                     {editing ? "Done" : "Edit"}
@@ -141,14 +132,6 @@ export default function Home() {
                   </Card>
                 );
               })}
-              {cook && (
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                  <Avatar name={cook.cook!} id={cook.cookId!} size={22} />
-                  <T s={13} color={C.muted}>
-                    {cook.cook} is cooking {SLOT_LABEL[cook.slot].toLowerCase()} today
-                  </T>
-                </View>
-              )}
             </View>
           ) : (
             <Card style={{ marginHorizontal: 16, gap: 12 }}>
@@ -229,25 +212,45 @@ export default function Home() {
           </>
         )}
 
-        <View style={{ gap: 12 }}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingHorizontal: 16 }}>
-            <Chip label="My recipes" tone="dark" on={lib === "mine"} onPress={() => setLib("mine")} />
-            <Chip label="Liked" tone="dark" on={lib === "liked"} onPress={() => setLib("liked")} />
-            <Chip label="Collections" tone="dark" on={lib === "colls"} onPress={() => setLib("colls")} />
-          </ScrollView>
-          {lib === "colls" ? (
-            <Collections />
-          ) : libMeals.length ? (
-            <RecipeGrid meals={libMeals} />
-          ) : (
-            <View style={{ paddingHorizontal: 16 }}>
-              <Empty
-                title={lib === "liked" ? "Nothing liked yet" : "No recipes of your own yet"}
-                text={lib === "liked" ? "Tap the heart on any recipe in the feed and it shows up here." : "Add your first recipe with the + button."}
-              />
-            </View>
-          )}
+        <View style={{ marginHorizontal: 16, justifyContent: "center" }}>
+          <View style={{ position: "absolute", left: 16, zIndex: 1 }} pointerEvents="none">
+            <Icon.search />
+          </View>
+          <TextInput value={query} onChangeText={setQuery} placeholder="Search recipes from others" placeholderTextColor={C.off} returnKeyType="search" autoCorrect={false} clearButtonMode="while-editing" accessibilityLabel="Search recipes" style={{ height: 48, borderRadius: 24, borderWidth: 1, borderColor: C.lineStrong, backgroundColor: C.card, paddingLeft: 44, paddingRight: 16, fontSize: 16, fontFamily: F.regular, color: C.ink }} />
         </View>
+
+        {q ? (
+          <View style={{ gap: 12 }}>
+            <H style={{ marginHorizontal: 16 }}>{found.length ? `${found.length} ${found.length === 1 ? "recipe" : "recipes"}` : "No recipes found"}</H>
+            {found.length ? (
+              <RecipeGrid meals={found} showAuthor />
+            ) : (
+              <T s={14} color={C.muted} style={{ marginHorizontal: 16 }}>
+                Try a dish, an ingredient or a friend’s name.
+              </T>
+            )}
+          </View>
+        ) : (
+          <View style={{ gap: 12 }}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingHorizontal: 16 }}>
+              <Chip label="My recipes" tone="dark" on={lib === "mine"} onPress={() => setLib("mine")} />
+              <Chip label="Liked" tone="dark" on={lib === "liked"} onPress={() => setLib("liked")} />
+              <Chip label="Collections" tone="dark" on={lib === "colls"} onPress={() => setLib("colls")} />
+            </ScrollView>
+            {lib === "colls" ? (
+              <Collections />
+            ) : libMeals.length ? (
+              <RecipeGrid meals={libMeals} />
+            ) : (
+              <View style={{ paddingHorizontal: 16 }}>
+                <Empty
+                  title={lib === "liked" ? "Nothing liked yet" : "No recipes of your own yet"}
+                  text={lib === "liked" ? "Tap the heart on any recipe in the feed and it shows up here." : "Add your first recipe with the + button."}
+                />
+              </View>
+            )}
+          </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
