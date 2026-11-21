@@ -1,18 +1,20 @@
 import { useRouter } from "expo-router";
 import { useMemo, useState } from "react";
-import { Pressable, RefreshControl, ScrollView, TextInput, View } from "react-native";
+import { Pressable, RefreshControl, ScrollView, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { AddSheet } from "@/components/AddSheet";
 import { PlanStrip, WaveBanner } from "@/components/HomeParts";
 import { Icon } from "@/components/icons";
 import { RecipeGrid } from "@/components/RecipeGrid";
 import { NewCollectionSheet } from "@/components/SaveSheet";
 import { Button, Chip, Dish, Empty, H, Loading, T } from "@/components/ui";
 import { useData } from "@/lib/data";
+import { useNavScroll, useNavSpace } from "@/lib/navbar";
 import { addDays, isoDay } from "@/lib/dates";
 import { addToPlan, usePlan } from "@/lib/plan";
 import { pantryMatch, usePrefs } from "@/lib/prefs";
 import { suggestFor } from "@/lib/taste";
-import { C, F } from "@/lib/theme";
+import { C } from "@/lib/theme";
 
 type Lib = "mine" | "liked" | "colls";
 
@@ -24,7 +26,9 @@ export default function Home() {
   const { plan, reload } = usePlan(today, addDays(today, 6));
   const [lib, setLib] = useState<Lib>("mine");
   const [filling, setFilling] = useState<string | null>(null);
-  const [query, setQuery] = useState("");
+  const [adding, setAdding] = useState(false);
+  const onScroll = useNavScroll();
+  const bottom = useNavSpace();
 
   const meals = useMemo(() => library?.meals ?? [], [library]);
   const picks = useMemo(() => suggestFor(meals, prefs.likes, prefs.avoid, library?.likedIds ?? []), [meals, prefs.likes, prefs.avoid, library?.likedIds]);
@@ -33,8 +37,6 @@ export default function Home() {
 
   const firstName = library.me.name.split(" ")[0];
   const libMeals = lib === "liked" ? meals.filter((m) => library.likedIds.includes(m.id)) : meals.filter((m) => m.mine);
-  const q = query.trim().toLowerCase();
-  const found = q ? meals.filter((m) => [m.name, m.author ?? "", ...m.ingredients, ...m.categories].some((t) => t.toLowerCase().includes(q))).sort((a, b) => Number(a.mine) - Number(b.mine) || (b.score ?? 0) - (a.score ?? 0)) : [];
   const likes = prefs.likes.slice(0, 2).map((l) => l.toLowerCase());
   const suggestText = likes.length ? `Picked for you, because you like ${likes.join(" and ")}.` : "Healthy picks to get you started. They get better as Otao learns what you like.";
 
@@ -57,32 +59,17 @@ export default function Home() {
 
   return (
     <SafeAreaView edges={["top"]} style={{ flex: 1, backgroundColor: C.bg }}>
-      <ScrollView contentContainerStyle={{ paddingTop: 14, gap: 20, flexGrow: 1 }} keyboardShouldPersistTaps="handled" refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void Promise.all([refresh(), reload()])} tintColor={C.coral} />}>
-        <View style={{ paddingHorizontal: 16, gap: 12 }}>
-          <T w="extrabold" s={22} numberOfLines={1} style={{ letterSpacing: -0.4, lineHeight: 28 }}>
+      <ScrollView onScroll={onScroll} scrollEventThrottle={32} contentContainerStyle={{ paddingTop: 14, gap: 20, flexGrow: 1 }} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void Promise.all([refresh(), reload()])} tintColor={C.coral} />}>
+        <View style={{ paddingHorizontal: 16, flexDirection: "row", alignItems: "center", gap: 12 }}>
+          <T w="extrabold" s={22} numberOfLines={1} style={{ flex: 1, letterSpacing: -0.4, lineHeight: 28 }}>
             What’s cooking, {firstName}?
           </T>
-          <View style={{ justifyContent: "center" }}>
-            <View style={{ position: "absolute", left: 16, zIndex: 1 }} pointerEvents="none">
-              <Icon.search />
-            </View>
-            <TextInput value={query} onChangeText={setQuery} placeholder="Search recipes from others" placeholderTextColor={C.off} returnKeyType="search" autoCorrect={false} clearButtonMode="while-editing" accessibilityLabel="Search recipes" style={{ height: 48, borderRadius: 24, borderWidth: 1, borderColor: C.lineStrong, backgroundColor: C.card, paddingLeft: 44, paddingRight: 16, fontSize: 16, fontFamily: F.regular, color: C.ink }} />
-          </View>
+          <Pressable accessibilityRole="button" accessibilityLabel="Add" onPress={() => setAdding(true)} style={({ pressed }) => ({ width: 44, height: 44, borderRadius: 22, backgroundColor: C.coral, alignItems: "center", justifyContent: "center", opacity: pressed ? 0.85 : 1 })}>
+            <Icon.plus size={22} />
+          </Pressable>
         </View>
 
-        {q ? (
-          <View style={{ gap: 12, paddingBottom: 32 }}>
-            <H style={{ marginHorizontal: 16 }}>{found.length ? `${found.length} ${found.length === 1 ? "recipe" : "recipes"}` : "No recipes found"}</H>
-            {found.length ? (
-              <RecipeGrid meals={found} showAuthor />
-            ) : (
-              <T s={14} color={C.muted} style={{ marginHorizontal: 16 }}>
-                Try a dish, an ingredient or a friend’s name.
-              </T>
-            )}
-          </View>
-        ) : (
-          <>
+        <>
             {!prefs.bannerHidden && prefs.likes.length === 0 && (
               <View style={{ marginHorizontal: 16, flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: C.butter, borderRadius: 18, paddingVertical: 12, paddingLeft: 14, paddingRight: 6 }}>
                 <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: "#FFFFFF", alignItems: "center", justifyContent: "center" }}>
@@ -106,7 +93,7 @@ export default function Home() {
 
             <View style={{ flexGrow: 1 }}>
               <WaveBanner pill="FOR YOU" title="Otao suggests" text={suggestText} action={{ label: prefs.pantry.length ? "Cook with what’s at home" : "Add what’s at home", onPress: () => router.push("/pantry") }} meals={picks} onPress={() => router.navigate("/feed")}>
-                <View style={{ gap: 12, paddingBottom: 32 }}>
+                <View style={{ gap: 12, paddingBottom: bottom }}>
                   <H style={{ marginHorizontal: 16 }}>Your recipes</H>
                   <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingHorizontal: 16 }}>
                     <Chip label="Mine" tone="dark" on={lib === "mine"} onPress={() => setLib("mine")} />
@@ -128,9 +115,9 @@ export default function Home() {
                 </View>
               </WaveBanner>
             </View>
-          </>
-        )}
+        </>
       </ScrollView>
+      <AddSheet open={adding} onClose={() => setAdding(false)} />
     </SafeAreaView>
   );
 }

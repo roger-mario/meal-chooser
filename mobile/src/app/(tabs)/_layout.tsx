@@ -1,66 +1,78 @@
-import { Tabs, useRouter } from "expo-router";
-import { useState } from "react";
-import { Pressable, View } from "react-native";
+import { Tabs } from "expo-router";
+import { Animated, Pressable, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { AddSheet } from "@/components/AddSheet";
 import { Icon } from "@/components/icons";
-import { T } from "@/components/ui";
+import { NAV_HEIGHT, NavBarProvider, useNavBar } from "@/lib/navbar";
 import { C } from "@/lib/theme";
 
 const TABS = [
   { name: "index", label: "Home", icon: Icon.home },
   { name: "feed", label: "Feed", icon: Icon.feed },
   { name: "plan", label: "Plan", icon: Icon.plan },
+  { name: "search", label: "Search", icon: Icon.search },
   { name: "you", label: "You", icon: Icon.you },
 ] as const;
 
-export default function TabsLayout() {
+type BarProps = { routes: { key: string; name: string }[]; index: number; go: (key: string) => void };
+
+/** A floating, rounded tab bar that gets a touch smaller while you scroll down. */
+function FloatingBar({ routes, index, go }: BarProps) {
   const insets = useSafeAreaInsets();
-  const router = useRouter();
-  const [adding, setAdding] = useState(false);
+  const { compact } = useNavBar();
+  const scale = compact.interpolate({ inputRange: [0, 1], outputRange: [1, 0.88] });
+  const lift = compact.interpolate({ inputRange: [0, 1], outputRange: [0, 6] });
   return (
-    <>
-      <Tabs
-        screenOptions={{ headerShown: false, sceneStyle: { backgroundColor: C.bg } }}
-        tabBar={({ state, navigateToTab }) => (
-          <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: "#FFFFFF", borderTopWidth: 1, borderTopColor: C.line, paddingBottom: Math.max(insets.bottom, 10), paddingTop: 8 }}>
-            {[TABS[0], TABS[1], null, TABS[2], TABS[3]].map((tab) => {
-              if (!tab)
-                return (
-                  <View key="add" style={{ flex: 1, alignItems: "center" }}>
-                    <Pressable accessibilityRole="button" accessibilityLabel="Add" onPress={() => setAdding(true)} style={{ width: 54, height: 40, borderRadius: 20, backgroundColor: C.coral, alignItems: "center", justifyContent: "center" }}>
-                      <Icon.plus size={24} />
-                    </Pressable>
-                  </View>
-                );
-              const index = state.routes.findIndex((r) => r.name === tab.name);
-              const focused = state.index === index;
-              const color = focused ? C.ink : C.off;
-              const Glyph = tab.icon;
-              return (
-                <Pressable
-                  key={tab.name}
-                  accessibilityRole="tab"
-                  accessibilityState={{ selected: focused }}
-                  accessibilityLabel={tab.label}
-                  onPress={() => (focused || index < 0 ? null : navigateToTab(state.routes[index].key))}
-                  style={{ flex: 1, alignItems: "center", gap: 2, paddingVertical: 2 }}
-                >
-                  <Glyph color={color} width={focused ? 2.2 : 1.9} />
-                  <T w={focused ? "bold" : "semibold"} s={11} color={color}>
-                    {tab.label}
-                  </T>
-                </Pressable>
-              );
-            })}
-          </View>
-        )}
+    <View pointerEvents="box-none" style={{ position: "absolute", left: 0, right: 0, bottom: Math.max(insets.bottom, 12), alignItems: "center" }}>
+      <Animated.View
+        style={{
+          width: "92%",
+          maxWidth: 420,
+          height: NAV_HEIGHT,
+          borderRadius: NAV_HEIGHT / 2,
+          backgroundColor: "rgba(255,255,255,0.96)",
+          borderWidth: 1,
+          borderColor: C.line,
+          flexDirection: "row",
+          alignItems: "center",
+          paddingHorizontal: 6,
+          shadowColor: "#2A2622",
+          shadowOpacity: 0.14,
+          shadowRadius: 18,
+          shadowOffset: { width: 0, height: 6 },
+          elevation: 8,
+          transform: [{ translateY: lift }, { scale }],
+        }}
       >
+        {TABS.map((tab) => {
+          const i = routes.findIndex((r) => r.name === tab.name);
+          const focused = index === i;
+          const Glyph = tab.icon;
+          return (
+            <Pressable
+              key={tab.name}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: focused }}
+              accessibilityLabel={tab.label}
+              onPress={() => (focused || i < 0 ? null : go(routes[i].key))}
+              style={{ flex: 1, height: NAV_HEIGHT - 14, borderRadius: (NAV_HEIGHT - 14) / 2, alignItems: "center", justifyContent: "center", backgroundColor: focused ? C.peach : "transparent" }}
+            >
+              <Glyph color={focused ? C.coralInk : C.ink} width={focused ? 2.3 : 1.9} size={26} />
+            </Pressable>
+          );
+        })}
+      </Animated.View>
+    </View>
+  );
+}
+
+export default function TabsLayout() {
+  return (
+    <NavBarProvider>
+      <Tabs screenOptions={{ headerShown: false, sceneStyle: { backgroundColor: C.bg } }} tabBar={({ state, navigateToTab }) => <FloatingBar routes={state.routes} index={state.index} go={navigateToTab} />}>
         {TABS.map((t) => (
           <Tabs.Screen key={t.name} name={t.name} />
         ))}
       </Tabs>
-      <AddSheet open={adding} onClose={() => setAdding(false)} onPickRecipe={(id) => router.push(`/recipe/${id}`)} />
-    </>
+    </NavBarProvider>
   );
 }

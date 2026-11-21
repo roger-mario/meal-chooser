@@ -5,6 +5,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Icon } from "@/components/icons";
 import { Avatar, Button, Card, Dish, H, Sheet, T } from "@/components/ui";
 import { api, type PlanEntry, type Shopping, type Slot } from "@/lib/api";
+import { useNavScroll, useNavSpace } from "@/lib/navbar";
 import { useData } from "@/lib/data";
 import { addDays, dayLabel, isoDay, monthDays } from "@/lib/dates";
 import { addToPlan, fillGaps, removeFromPlan, SLOT_LABEL, usePlan } from "@/lib/plan";
@@ -20,6 +21,8 @@ const VIEWS: [View_, string][] = [
 
 export default function PlanTab() {
   const router = useRouter();
+  const onScroll = useNavScroll();
+  const bottom = useNavSpace();
   const { library, meal } = useData();
   const today = isoDay();
   const [view, setView] = useState<View_>("today");
@@ -67,7 +70,9 @@ export default function PlanTab() {
   return (
     <SafeAreaView edges={["top"]} style={{ flex: 1, backgroundColor: C.bg }}>
       <ScrollView
-        contentContainerStyle={{ padding: 16, gap: 14, paddingBottom: 40 }}
+        onScroll={onScroll}
+        scrollEventThrottle={32}
+        contentContainerStyle={{ padding: 16, gap: 14, paddingBottom: bottom }}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -198,7 +203,7 @@ export default function PlanTab() {
           <View style={{ flexDirection: "row", alignItems: "baseline" }}>
             <H style={{ flex: 1 }}>Shopping list</H>
             <T s={13} color={C.muted}>
-              {shopping?.lines.length ?? 0} items · next 7 days
+              {shopping?.lines.length ?? 0} {shopping?.lines.length === 1 ? "item" : "items"} · next 7 days
             </T>
           </View>
           <T s={14} color={C.ink2} numberOfLines={3}>

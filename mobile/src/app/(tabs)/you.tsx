@@ -8,11 +8,14 @@ import { Avatar, Card, T } from "@/components/ui";
 import { api, API_URL } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useData } from "@/lib/data";
+import { useNavScroll, useNavSpace } from "@/lib/navbar";
 import { usePrefs } from "@/lib/prefs";
 import { C } from "@/lib/theme";
 
 export default function You() {
   const router = useRouter();
+  const onScroll = useNavScroll();
+  const bottom = useNavSpace();
   const { me, signOut, deleteAccount } = useAuth();
   const { library } = useData();
   const { prefs, update } = usePrefs();
@@ -47,7 +50,7 @@ export default function You() {
 
   return (
     <SafeAreaView edges={["top"]} style={{ flex: 1, backgroundColor: C.bg }}>
-      <ScrollView contentContainerStyle={{ padding: 16, gap: 16, paddingBottom: 40 }}>
+      <ScrollView onScroll={onScroll} scrollEventThrottle={32} contentContainerStyle={{ padding: 16, gap: 16, paddingBottom: bottom }}>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
           <Avatar name={me.name} id={me.id} size={72} />
           <View style={{ flex: 1 }}>

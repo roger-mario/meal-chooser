@@ -5,9 +5,13 @@ import Svg, { Circle, Ellipse, Path } from "react-native-svg";
 import type { MealSummary, PlanEntry } from "@/lib/api";
 import { addDays, shortDate } from "@/lib/dates";
 import { SLOT_LABEL, SLOT_ORDER } from "@/lib/plan";
-import { C } from "@/lib/theme";
+import { C, tileFor } from "@/lib/theme";
 import { Icon } from "./icons";
 import { Button, Dish, Meta, ScoreChip, T } from "./ui";
+
+
+// Tiles on the blue wave must stand out from it, so blue tiles swap to a warm one.
+const onSky = (tile: string) => (tile === "#E6EEFB" ? C.peach : tile);
 
 const PAGES = [
   { key: "today", label: "Today" },
@@ -194,7 +198,7 @@ export function RecipeCarousel({ meals }: { meals: MealSummary[] }) {
       {meals.map((m) => (
         <Pressable key={m.id} accessibilityRole="button" onPress={() => router.push(`/recipe/${m.id}`)} style={({ pressed }) => ({ width: 240, gap: 8, opacity: pressed ? 0.9 : 1 })}>
           <View>
-            <Dish meal={m} style={{ height: 200 }} radius={20} />
+            <Dish meal={m} style={{ height: 200, backgroundColor: onSky(tileFor(m.id)) }} radius={20} />
             <ScoreChip score={m.score} style={{ position: "absolute", left: 10, top: 10 }} />
           </View>
           <View style={{ gap: 2 }}>

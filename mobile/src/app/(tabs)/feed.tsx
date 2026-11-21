@@ -7,9 +7,8 @@ import { SaveSheet } from "@/components/SaveSheet";
 import { Avatar, Button, Dish, Loading, T } from "@/components/ui";
 import { API_URL, type MealSummary } from "@/lib/api";
 import { useData } from "@/lib/data";
+import { useNavSpace } from "@/lib/navbar";
 import { C, tileFor } from "@/lib/theme";
-
-const TAB_BAR = 64;
 
 /** Reel-style feed: one recipe per screen, swipe up for the next. */
 export default function Feed() {
@@ -18,7 +17,8 @@ export default function Feed() {
   const insets = useSafeAreaInsets();
   const [mode, setMode] = useState<"all" | "friends">("all");
   const [saving, setSaving] = useState<number | null>(null);
-  const pageH = height - TAB_BAR - Math.max(insets.bottom, 10);
+  const navSpace = useNavSpace();
+  const pageH = height;
 
   const items = useMemo(() => {
     const all = (library?.meals ?? []).filter((m) => (mode === "friends" ? !m.mine : true));
@@ -39,7 +39,7 @@ export default function Feed() {
         decelerationRate="fast"
         getItemLayout={(_, i) => ({ length: pageH, offset: pageH * i, index: i })}
         renderItem={({ item }) => (
-          <Reel meal={item} height={pageH} topInset={insets.top} liked={isLiked(item.id)} saved={inAnyCollection(item.id)} onLike={() => toggleLike(item.id)} onSave={() => setSaving(item.id)} />
+          <Reel meal={item} height={pageH} topInset={insets.top} bottomInset={navSpace - 12} liked={isLiked(item.id)} saved={inAnyCollection(item.id)} onLike={() => toggleLike(item.id)} onSave={() => setSaving(item.id)} />
         )}
         ListEmptyComponent={
           <View style={{ height: pageH, padding: 24, justifyContent: "center" }}>
@@ -64,17 +64,17 @@ export default function Feed() {
   );
 }
 
-function Reel({ meal, height, topInset, liked, saved, onLike, onSave }: { meal: MealSummary; height: number; topInset: number; liked: boolean; saved: boolean; onLike: () => void; onSave: () => void }) {
+function Reel({ meal, height, topInset, bottomInset, liked, saved, onLike, onSave }: { meal: MealSummary; height: number; topInset: number; bottomInset: number; liked: boolean; saved: boolean; onLike: () => void; onSave: () => void }) {
   const router = useRouter();
   const author = meal.author ?? "Otao";
   return (
     <View style={{ height, backgroundColor: tileFor(meal.id) }}>
       {meal.imageUrl ? (
-        <Dish meal={meal} style={{ position: "absolute", left: 0, right: 0, top: 0, height: height - 150 }} radius={0} />
+        <Dish meal={meal} style={{ position: "absolute", left: 0, right: 0, top: 0, height: height - 150 - bottomInset }} radius={0} />
       ) : (
-        <Dish meal={meal} fit="contain" style={{ position: "absolute", left: 0, right: 0, top: topInset + 40, height: height - 330 - topInset, backgroundColor: "transparent" }} radius={0} />
+        <Dish meal={meal} fit="contain" style={{ position: "absolute", left: 0, right: 0, top: topInset + 40, height: height - 330 - topInset - bottomInset, backgroundColor: "transparent" }} radius={0} />
       )}
-      <View style={{ position: "absolute", right: 12, bottom: 290, alignItems: "center", gap: 12 }}>
+      <View style={{ position: "absolute", right: 12, bottom: 290 + bottomInset, alignItems: "center", gap: 12 }}>
         <RoundButton label={liked ? "Unlike" : "Like"} onPress={onLike}>
           <Icon.heart fill={liked ? C.like : "none"} color={liked ? C.like : C.ink} />
         </RoundButton>
@@ -85,7 +85,7 @@ function Reel({ meal, height, topInset, liked, saved, onLike, onSave }: { meal: 
           <Icon.share />
         </RoundButton>
       </View>
-      <View style={{ position: "absolute", left: 12, right: 12, bottom: 12, backgroundColor: "#FFFFFF", borderRadius: 24, padding: 16, gap: 10, shadowColor: "#2A2622", shadowOpacity: 0.12, shadowRadius: 14, shadowOffset: { width: 0, height: 4 } }}>
+      <View style={{ position: "absolute", left: 12, right: 12, bottom: 12 + bottomInset, backgroundColor: "#FFFFFF", borderRadius: 24, padding: 16, gap: 10, shadowColor: "#2A2622", shadowOpacity: 0.12, shadowRadius: 14, shadowOffset: { width: 0, height: 4 } }}>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
           <Avatar name={author} id={author.length} size={30} />
           <T w="semibold" s={14}>
