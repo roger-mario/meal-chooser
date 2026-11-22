@@ -19,9 +19,9 @@ export function AuthorLine({
 }) {
   const edited = updatedAt.getTime() - createdAt.getTime() > 60_000;
   return (
-    <p className="flex flex-wrap items-center gap-x-1.5 text-xs text-stone-400">
+    <p className="flex flex-wrap items-center gap-x-1.5 text-[13px] text-muted">
       {author && (
-        <span className="inline-flex items-center gap-1 text-stone-500">
+        <span className="inline-flex items-center gap-1.5 font-bold text-ink2">
           {!compact && <Avatar id={author.id} name={author.name} size="sm" />}
           {author.name}
         </span>

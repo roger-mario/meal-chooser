@@ -19,12 +19,19 @@ import { COST_STORE } from "@/lib/cost";
 import { aiAvailable } from "@/lib/nutrients";
 import { MealChat } from "@/components/MealChat";
 import { getMeal, listComments } from "@/lib/queries";
-import { currentHour, TIME_ZONE, todayISO } from "@/lib/dates";
+import { currentHour, formatDay, TIME_ZONE, todayISO } from "@/lib/dates";
 import { labsEnabled } from "@/lib/labs-queries";
 import { AteThisButton } from "@/components/labs/AteThisButton";
 import { getCurrentUser } from "@/lib/users";
 import { canPublish, collectionInApp, isFavourite, recordView } from "@/lib/collection";
-import { FavouriteButton } from "@/components/collection/FavouriteButton";
+import { AddToPlan } from "@/components/v7/AddToPlan";
+import { Fold } from "@/components/v7/Fold";
+import { Icon } from "@/components/v7/Icons";
+import { LikeButton } from "@/components/v7/LikeButton";
+import { mealHealth } from "@/lib/health";
+import { addDays } from "@/lib/labs";
+import { chf } from "@/lib/look";
+import { mealFacts } from "@/lib/meal-facts";
 import { PublicToggle } from "@/components/collection/PublicToggle";
 
 export const dynamic = "force-dynamic";
@@ -33,8 +40,8 @@ export const maxDuration = 300;
 
 function OutdatedNote() {
   return (
-    <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900">
-      ⚠️ The ingredients or servings changed since this estimate, or it was made with an older, less accurate method.
+    <p className="rounded-2xl bg-butter px-3.5 py-2.5 text-sm text-butter-ink">
+      The ingredients or servings changed since this estimate, or it was made with an older, less accurate method.
       Open the details below and re-estimate for up-to-date values.
     </p>
   );
@@ -52,7 +59,7 @@ export default async function MealPage({ params }: PageProps<"/meals/[id]">) {
   if (!meal) notFound();
   // Quick picks learn from what each person opens, also before they turn Labs on.
   if (me) after(() => recordView(me.id, meal.id).catch(() => {}));
-  const favourite = collection && me ? await isFavourite(me.id, meal.id) : false;
+  const favourite = me ? await isFavourite(me.id, meal.id) : false;
   const ai = aiAvailable();
   const costJob = jobStatus(meal.costJobStartedAt, meal.costJobError);
   const nutritionJob = jobStatus(meal.nutritionJobStartedAt, meal.nutritionJobError);
@@ -75,36 +82,74 @@ export default async function MealPage({ params }: PageProps<"/meals/[id]">) {
     />
   );
 
+  const today = todayISO();
+  const planDays = Array.from({ length: 7 }, (_, i) => {
+    const day = addDays(today, i);
+    return { day, label: i === 0 ? "Today" : i === 1 ? "Tomorrow" : formatDay(day, { day: undefined, month: undefined }) };
+  });
+  const perPortion = mealFacts(meal).chf;
+
   return (
-    <div className="space-y-4 sm:space-y-6">
+    <div className="mx-auto max-w-3xl space-y-5">
       <MealView
         ingredientLinks
         meal={meal}
+        top={
+          <>
+            <Link href="/" aria-label="Back to Home" className="flex h-11 w-11 items-center justify-center rounded-full bg-white/95 shadow-sm">
+              <Icon.back className="h-5 w-5" />
+            </Link>
+            <span className="flex-1" />
+            {me && <LikeButton mealId={meal.id} on={favourite} />}
+          </>
+        }
         actions={
           <>
+            <AddToPlan mealId={meal.id} days={planDays} />
             <Link href={`/meals/${meal.id}/edit`} className="btn">
-              ✏️ Edit
+              <Icon.edit className="h-4 w-4" /> Edit
             </Link>
             <ShareButton mealId={meal.id} token={meal.shareToken} />
-            {bringLines(meal.ingredients).length > 0 && (
-              <BringButton token={bringToken(meal.id)} servings={meal.servings} />
-            )}
-            {collection && me && <FavouriteButton mealId={meal.id} on={favourite} />}
+            {bringLines(meal.ingredients).length > 0 && <BringButton token={bringToken(meal.id)} servings={meal.servings} />}
             {collection && canPublish(meal, me?.id) && <PublicToggle mealId={meal.id} isPublic={meal.isPublic} />}
-            {labs && me && <AteThisButton mealId={meal.id} day={todayISO()} hour={currentHour()} />}
+            {labs && me && <AteThisButton mealId={meal.id} day={today} hour={currentHour()} />}
           </>
         }
       />
 
       {meal.nutrition && (
-        <section className="card space-y-3 p-4 sm:p-6">
-          <h2 className="text-lg font-semibold">✨ Otao score</h2>
+        <Fold title="Otao score" meta={mealHealth(meal.nutrition)?.score} open>
           <HealthSummary nutrition={meal.nutrition} />
-        </section>
+        </Fold>
       )}
 
-      <section className="card space-y-4 p-4 sm:p-6">
-        <h2 className="text-lg font-semibold">💰 Cost at {COST_STORE}</h2>
+      <Fold title="Nutrition per serving" meta={meal.nutrition ? `${Math.round(meal.nutrition.perServing.calories ?? 0)} kcal` : "Not yet"} open={nutritionJob.running || !!nutritionJob.error}>
+        {isOutdated(meal.nutrition, meal) && <OutdatedNote />}
+        {meal.nutrition ? (
+          <NutritionPanel
+            nutrition={meal.nutrition}
+            detailsOpen={nutritionJob.running || !!nutritionJob.error}
+            details={
+              <>
+                {nutritionButton}
+                <NutritionForm mealId={meal.id} nutrition={meal.nutrition} />
+              </>
+            }
+          />
+        ) : (
+          <>
+            <p className="text-sm text-muted">
+              {ai
+                ? "No values yet. Let the AI estimate calories, macros, vitamins and minerals, or enter them yourself."
+                : "No values yet. Enter them below, for example from a package label or a nutrition app."}
+            </p>
+            {nutritionButton}
+            <NutritionForm mealId={meal.id} nutrition={meal.nutrition} />
+          </>
+        )}
+      </Fold>
+
+      <Fold title={`Cost at ${COST_STORE}`} meta={chf(perPortion) ?? "Not yet"} open={costJob.running || !!costJob.error}>
         {isOutdated(meal.cost, meal) && <OutdatedNote />}
         {meal.cost && meal.cost.items.length > 0 ? (
           <CostPanel
@@ -120,7 +165,7 @@ export default async function MealPage({ params }: PageProps<"/meals/[id]">) {
           />
         ) : (
           <>
-            <p className="text-sm text-stone-500">
+            <p className="text-sm text-muted">
               {ai
                 ? `No prices yet. Let the AI estimate current ${COST_STORE} prices, or enter them yourself.`
                 : `No prices yet. Enter what each ingredient costs at ${COST_STORE} below.`}
@@ -129,48 +174,11 @@ export default async function MealPage({ params }: PageProps<"/meals/[id]">) {
             <CostForm mealId={meal.id} ingredients={meal.ingredients} cost={meal.cost} />
           </>
         )}
-      </section>
+      </Fold>
 
-      <section className="card space-y-4 p-4 sm:p-6">
-        <h2 className="text-lg font-semibold">🥗 Nutrition per serving</h2>
-        {isOutdated(meal.nutrition, meal) && <OutdatedNote />}
-        {meal.nutrition ? (
-          <>
-            <NutritionPanel
-              nutrition={meal.nutrition}
-              detailsOpen={nutritionJob.running || !!nutritionJob.error}
-              details={
-                <>
-                  {nutritionButton}
-                  <NutritionForm mealId={meal.id} nutrition={meal.nutrition} />
-                </>
-              }
-            />
-          </>
-        ) : (
-          <>
-            <p className="text-sm text-stone-500">
-              {ai
-                ? "No values yet. Let the AI estimate calories, macros, vitamins and minerals, or enter them yourself."
-                : "No values yet. Enter them below, for example from a package label or a nutrition app."}
-            </p>
-            {nutritionButton}
-            <NutritionForm mealId={meal.id} nutrition={meal.nutrition} />
-          </>
-        )}
-      </section>
-
-      <section id="chat" className="card space-y-4 p-4 sm:p-6">
-        <h2 className="text-lg font-semibold">
-          💬 Chat{messages.length > 0 && <span className="ml-1.5 text-sm font-normal text-stone-400">{messages.length}</span>}
-        </h2>
-        <MealChat
-          mealId={meal.id}
-          messages={messages}
-          meId={me?.id ?? null}
-          timeZone={TIME_ZONE}
-        />
-      </section>
+      <Fold id="chat" title="Comments" meta={messages.length || undefined}>
+        <MealChat mealId={meal.id} messages={messages} meId={me?.id ?? null} timeZone={TIME_ZONE} />
+      </Fold>
 
       <div className="flex justify-center pt-2">
         <DeleteMealButton mealId={meal.id} name={meal.name} />

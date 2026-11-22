@@ -2,171 +2,138 @@ import { sql } from "drizzle-orm";
 import Link from "next/link";
 import { after } from "next/server";
 import { db } from "@/db";
-import { CategoryFilter } from "@/components/CategoryFilter";
-import { MealCard } from "@/components/MealCard";
-import { RandomButton } from "@/components/RandomButton";
-import { SearchBox } from "@/components/SearchBox";
-import { SortSelect } from "@/components/SortSelect";
-import { formatDay, todayISO } from "@/lib/dates";
-import { parseSort, sortMeals } from "@/lib/meal-sort";
-import { categoryCounts, commentCounts, listCategories, listMeals } from "@/lib/queries";
+import { Dish } from "@/components/v7/Dish";
+import { Icon } from "@/components/v7/Icons";
+import { PlanStrip, type StripDay } from "@/components/v7/PlanStrip";
+import { RecipeCarousel, RecipeGrid } from "@/components/v7/RecipeCards";
+import { Tabs } from "@/components/v7/Tabs";
+import { WaveBanner } from "@/components/v7/WaveBanner";
+import { currentHour } from "@/lib/dates";
+import { likeCounts, likedIds, listCollections } from "@/lib/library";
+import { chf, onSky, pickGreeting, tileFor } from "@/lib/look";
+import { mealFacts } from "@/lib/meal-facts";
+import { planDays } from "@/lib/plan-view";
+import { listMeals, type MealWithCategories } from "@/lib/queries";
 import { getCurrentUser } from "@/lib/users";
-import { collectionInApp, quickPicks } from "@/lib/collection";
-import { QuickPicks } from "@/components/collection/QuickPicks";
 
 export const dynamic = "force-dynamic";
 
-function greeting() {
-  const hour = Number(
-    new Intl.DateTimeFormat("en-GB", { hour: "numeric", hour12: false, timeZone: process.env.APP_TIMEZONE || "UTC" }).format(
-      new Date(),
-    ),
-  );
-  if (hour < 11) return "Good morning";
-  if (hour < 17) return "Hi";
-  return "Good evening";
-}
-
-export default async function MealsPage({ searchParams }: PageProps<"/">) {
-  const { category, q, ingredient: ingredientParam, variant: variantParam, sort: sortParam } = await searchParams;
-  const categoryId = category ? Number(category) : undefined;
-  const query = typeof q === "string" ? q.trim() : "";
-  const ingredient = typeof ingredientParam === "string" ? ingredientParam.trim().slice(0, 80) : "";
-  const variant = ingredient && typeof variantParam === "string" ? variantParam.trim().slice(0, 80) : "";
-  const sort = parseSort(sortParam);
-  const today = todayISO();
-  const [found, categories, counts, chats, me, collection] = await Promise.all([
-    listMeals({ categoryId, q: query, ingredient, variant }),
-    listCategories(),
-    categoryCounts(),
-    commentCounts(),
-    getCurrentUser(),
-    collectionInApp(),
+export default async function HomePage() {
+  const [all, me, likes] = await Promise.all([listMeals(), getCurrentUser(), likeCounts()]);
+  const [days, liked, cols] = await Promise.all([
+    planDays(all, 7),
+    me ? likedIds(me.id) : Promise.resolve([]),
+    me ? listCollections(me.id) : Promise.resolve([]),
   ]);
-  const meals = sortMeals(found, sort);
-  const filtering = Boolean(query || categoryId || ingredient);
-  const picks = collection && me && !filtering ? await quickPicks(me.id, found) : [];
-  // The lists above come from the cache. Wake the database now so opening a meal is quick too.
+  // The lists above come from the cache. Wake the database now so opening a recipe is quick too.
   after(() => db().execute(sql`select 1`).catch(() => {}));
-  // Keeps the other filters when removing the ingredient (or only its kind).
-  const withoutIngredient = (keepIngredient: boolean) => {
-    const p = new URLSearchParams();
-    if (categoryId) p.set("category", String(categoryId));
-    if (query) p.set("q", query);
-    if (typeof sortParam === "string") p.set("sort", sortParam);
-    if (keepIngredient) p.set("ingredient", ingredient);
-    return p.size ? `/?${p}` : "/";
-  };
-  // A one-word search can be narrowed to meals that use it as an ingredient.
-  const asIngredientHref =
-    query && !ingredient && !/\s/.test(query)
-      ? `/?${new URLSearchParams({ ...(categoryId ? { category: String(categoryId) } : {}), ingredient: query })}`
-      : null;
-  const activeCategory = categories.find((c) => c.id === categoryId);
+
+  const byId = new Map(all.map((m) => [m.id, m]));
+  const mine = me ? all.filter((m) => m.author?.id === me.id) : all;
+  const likedMeals = liked.map((id) => byId.get(id)).filter((m): m is MealWithCategories => !!m);
+  const likedSet = new Set(liked);
+  const planned = new Set(days.flatMap((d) => d.entries.map((e) => e.meal?.id)));
+  const rank = (m: MealWithCategories) => (likes.get(m.id) ?? 0) * 12 + (mealFacts(m).score ?? 45) + (planned.has(m.id) ? -40 : 0);
+  const others = all.filter((m) => !me || (m.author?.id !== me.id && !likedSet.has(m.id)));
+  const picks = (others.length >= 3 ? others : all).toSorted((a, b) => rank(b) - rank(a)).slice(0, 8);
+
+  const strip = (d: (typeof days)[number]): StripDay => ({
+    day: d.day,
+    label: d.long,
+    meals: d.entries.map((e) => {
+      const f = e.meal ? mealFacts(e.meal) : null;
+      return {
+        id: e.id,
+        slot: e.slot,
+        name: e.meal?.name ?? e.label ?? "",
+        meta: f ? [f.time, f.kcal ? `${f.kcal} kcal` : null, chf(f.chf)].filter(Boolean).join(" · ") : "",
+        href: e.meal ? `/meals/${e.meal.id}` : null,
+        art: e.meal ? <Dish meal={e.meal} className="h-full w-full" sizes="56px" /> : <span className="block h-full w-full bg-sand" />,
+      };
+    }),
+  });
+  const week = days.map((d) => ({ day: d.day, short: d.short, isToday: d.isToday, text: d.entries.map((e) => e.meal?.name ?? e.label).join(", ") }));
+
+  const empty = (text: string, cta?: React.ReactNode) => (
+    <div className="card flex flex-col items-center gap-3 px-6 py-10 text-center">
+      <p className="text-muted">{text}</p>
+      {cta}
+    </div>
+  );
 
   return (
-    <div className="space-y-5 sm:space-y-6">
-      <section className="flex items-center justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-sm text-stone-500">{formatDay(today, { weekday: "long", day: "numeric", month: "long" })}</p>
-          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-            {greeting()}
-            {me ? `, ${me.name}` : ""} 👋
-          </h1>
-        </div>
-        <RandomButton
-          mealIds={meals.map((m) => m.id)}
-          fallbackHref={categoryId ? `/random?category=${categoryId}` : "/random"}
-        />
+    <div className="space-y-6">
+      <section className="flex items-center gap-3 md:hidden">
+        <h1 className="min-w-0 flex-1 text-[26px] leading-tight font-extrabold tracking-tight">{pickGreeting(me?.name.split(" ")[0] ?? null, currentHour())}</h1>
+        <Link href="/meals/new" aria-label="Add a recipe" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-coral text-ink">
+          <Icon.plus className="h-5 w-5" />
+        </Link>
       </section>
+      <h1 className="hidden text-3xl font-extrabold tracking-tight md:block">{pickGreeting(me?.name.split(" ")[0] ?? null, currentHour())}</h1>
 
-      {picks.length > 0 && <QuickPicks picks={picks} />}
+      <PlanStrip today={strip(days[0])} tomorrow={strip(days[1])} week={week} />
 
-      <section className="space-y-3">
-        <div className="flex gap-2">
-          <div className="flex-1">
-            <SearchBox />
+      <WaveBanner
+        title="Otao suggests"
+        text={picks.length ? "Healthy picks from your household and friends, based on what you like." : "Add a few recipes and Otao starts suggesting."}
+        href="/feed"
+        panel={
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-extrabold tracking-tight">Your recipes</h2>
+              <Link href="/search" className="flex items-center gap-1.5 text-sm font-bold text-coral-ink hover:underline">
+                <Icon.search className="h-4 w-4" /> Search
+              </Link>
+            </div>
+            <Tabs
+              tabs={[
+                {
+                  label: "Mine",
+                  count: mine.length,
+                  panel: mine.length
+                    ? <RecipeGrid meals={mine} preload={4} />
+                    : empty("You haven't added a recipe yet.", <Link href="/meals/new" className="btn-primary">Add your first recipe</Link>),
+                },
+                {
+                  label: "Liked",
+                  count: likedMeals.length,
+                  panel: likedMeals.length ? <RecipeGrid meals={likedMeals} showAuthor /> : empty("Tap the heart on a recipe to keep it here."),
+                },
+                {
+                  label: "Collections",
+                  count: cols.length,
+                  panel: cols.length ? (
+                    <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+                      {cols.map((c) => {
+                        const cover = c.mealIds.map((id) => byId.get(id)).filter((m): m is MealWithCategories => !!m).slice(0, 4);
+                        return (
+                          <li key={c.id}>
+                            <Link href={`/you/collections/${c.id}`} className="group block">
+                              <div className="grid aspect-[4/3] grid-cols-2 gap-0.5 overflow-hidden rounded-[18px] bg-sand transition group-hover:brightness-95">
+                                {cover.map((m) => (
+                                  <Dish key={m.id} meal={m} className={cover.length === 1 ? "col-span-2 row-span-2" : ""} sizes="120px" />
+                                ))}
+                              </div>
+                              <p className="mt-2 truncate text-[15px] font-bold">{c.name}</p>
+                              <p className="text-xs text-muted">
+                                {c.mealIds.length} recipe{c.mealIds.length === 1 ? "" : "s"}
+                              </p>
+                            </Link>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  ) : (
+                    empty("Group recipes into collections like “Weekly meals” from a recipe’s page.")
+                  ),
+                },
+              ]}
+            />
           </div>
-          <SortSelect value={sort} />
-        </div>
-        <CategoryFilter categories={categories} counts={Object.fromEntries(counts)} activeId={categoryId} q={query} />
-        {asIngredientHref && (
-          <Link href={asIngredientHref} className="inline-flex text-sm font-medium text-emerald-700 hover:underline">
-            🥕 Only meals with &quot;{query}&quot; as an ingredient
-          </Link>
-        )}
-        {ingredient && (
-          <div className="flex flex-wrap items-center gap-2 text-sm">
-            <span className="text-stone-500">With</span>
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 py-1.5 pr-1.5 pl-3 font-medium text-emerald-900">
-              🥕 {ingredient}
-              {variant && <span className="font-normal text-emerald-800">· {variant}</span>}
-              <Link
-                href={withoutIngredient(false)}
-                aria-label="Remove ingredient filter"
-                className="flex h-6 w-6 items-center justify-center rounded-full text-emerald-800 hover:bg-emerald-200"
-              >
-                ✕
-              </Link>
-            </span>
-            {variant && (
-              <Link href={withoutIngredient(true)} className="font-medium text-emerald-700 hover:underline">
-                Any {ingredient}
-              </Link>
-            )}
-          </div>
-        )}
-      </section>
-
-      <section className="space-y-3">
-        <p className="text-sm text-stone-500">
-          {meals.length} meal{meals.length === 1 ? "" : "s"}
-          {activeCategory && ` in ${activeCategory.emoji} ${activeCategory.name}`}
-          {query && ` matching "${query}"`}
-          {ingredient && ` with ${variant ? `${ingredient} (${variant})` : ingredient}`}
-          {filtering && (
-            <>
-              {" · "}
-              <Link href="/" className="font-medium text-emerald-700 hover:underline">
-                Clear
-              </Link>
-            </>
-          )}
-        </p>
-
-        {meals.length === 0 ? (
-          <div className="card flex flex-col items-center gap-3 px-6 py-12 text-center">
-            <span className="text-5xl">🍲</span>
-            <p className="text-stone-600">
-              {query ? `Nothing found for "${query}".` : ingredient ? `No meals with ${ingredient} yet.` : categoryId ? "No meals in this category yet." : "No meals yet."}
-            </p>
-            {!query && !ingredient && (
-              <Link href="/meals/new" className="btn-primary">
-                Add your first favourite meal
-              </Link>
-            )}
-          </div>
-        ) : (
-          <ul className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-3">
-            {meals.map((m, i) => (
-              <li key={m.id}>
-                <MealCard meal={m} comments={chats.get(m.id) ?? 0} preload={i < 4} />
-              </li>
-            ))}
-            {!filtering && (
-              <li className="hidden sm:block">
-                <Link
-                  href="/meals/new"
-                  className="flex h-full min-h-48 flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-stone-200 p-6 text-center text-stone-500 transition hover:border-emerald-600 hover:text-emerald-700"
-                >
-                  <span className="text-3xl">＋</span>
-                  <span className="text-sm font-medium">Add a meal</span>
-                </Link>
-              </li>
-            )}
-          </ul>
-        )}
-      </section>
+        }
+      >
+        {picks.length > 0 && <RecipeCarousel meals={picks} tileFor={(m) => onSky(tileFor(m.id))} />}
+      </WaveBanner>
     </div>
   );
 }

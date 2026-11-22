@@ -35,6 +35,8 @@ export async function setFavourite(mealId: number, favourite: boolean): Promise<
   }
   revalidatePath(`/meals/${mealId}`);
   revalidatePath("/");
+  revalidatePath("/feed");
+  revalidatePath("/you", "layout");
   revalidatePath("/cook");
   return null;
 }

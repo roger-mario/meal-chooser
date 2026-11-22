@@ -22,7 +22,7 @@ export default async function SharedMealPage({ params }: PageProps<"/s/[token]">
   return (
     <>
       <PublicHeader badge="Shared recipe · view only" short="View only" />
-      <main className="pb-safe mx-auto w-full max-w-5xl flex-1 space-y-4 px-4 py-5 sm:space-y-6 sm:py-8">
+      <main className="pb-safe mx-auto w-full max-w-3xl flex-1 space-y-5 px-4 pt-[calc(env(safe-area-inset-top)+14px)] pb-10 md:pt-8">
         <PublicMealSections meal={meal} />
       </main>
     </>

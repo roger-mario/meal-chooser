@@ -1,13 +1,12 @@
-import { avatarColor } from "@/lib/avatar";
+import { avatarColors, initials } from "@/lib/look";
 
-export function Avatar({ id, name, size = "md" }: { id: number | null; name: string; size?: "sm" | "md" }) {
-  const dims = size === "sm" ? "h-6 w-6 text-[11px]" : "h-9 w-9 text-sm";
+/** A person's initials on their own pastel colour. */
+export function Avatar({ id, name, size = "md" }: { id: number | null; name: string; size?: "sm" | "md" | "lg" }) {
+  const dims = size === "sm" ? "h-6 w-6 text-[10px]" : size === "lg" ? "h-16 w-16 text-xl" : "h-9 w-9 text-xs";
+  const [bg, fg] = id == null ? ["#F6F1EA", "#6F6860"] : avatarColors(id);
   return (
-    <span
-      className={`inline-flex shrink-0 items-center justify-center rounded-full font-semibold text-white ${dims} ${avatarColor(id)}`}
-      aria-hidden
-    >
-      {name.slice(0, 1).toUpperCase()}
+    <span className={`inline-flex shrink-0 items-center justify-center rounded-full font-extrabold ${dims}`} style={{ backgroundColor: bg, color: fg }} aria-hidden>
+      {name === "?" ? "?" : initials(name)}
     </span>
   );
 }

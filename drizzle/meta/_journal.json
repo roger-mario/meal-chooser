@@ -64,6 +64,13 @@
       "when": 1792925628555,
       "tag": "0008_public_collection",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1795264060035,
+      "tag": "0009_app_sign_in",
+      "breakpoints": true
     }
   ]
 }

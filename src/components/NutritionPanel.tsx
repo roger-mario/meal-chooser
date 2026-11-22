@@ -29,7 +29,7 @@ function NutrientRow({ def, value, pct }: Row) {
           <div className="flex items-center gap-2">
             <div className="h-1.5 flex-1 rounded bg-stone-100">
               <div
-                className={`h-1.5 rounded ${limit ? "bg-amber-500" : "bg-emerald-600"}`}
+                className={`h-1.5 rounded ${limit ? "bg-amber-500" : "bg-green-600"}`}
                 style={{ width: `${Math.min(pct, 100)}%` }}
               />
             </div>
@@ -88,12 +88,12 @@ export function NutritionPanel({
     <div className="space-y-5">
       <div className="grid grid-cols-4 gap-2 text-center">
         {headline.map((h) => (
-          <div key={h.label} className="rounded-lg bg-emerald-50 p-3">
-            <div className="text-xl font-semibold text-emerald-900">
+          <div key={h.label} className="rounded-lg bg-green-50 p-3">
+            <div className="text-xl font-semibold text-green-900">
               {h.value}
               <span className="ml-0.5 text-xs font-normal">{h.unit}</span>
             </div>
-            <div className="text-xs text-emerald-800">{h.label}</div>
+            <div className="text-xs text-green-800">{h.label}</div>
           </div>
         ))}
       </div>

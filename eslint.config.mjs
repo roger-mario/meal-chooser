@@ -17,6 +17,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // The phone app has its own setup (mobile/eslint.config.js).
+    "mobile/**",
   ]),
 ]);
 

@@ -21,7 +21,7 @@ export function EditCategoryRow({ category, meals }: { category: Category; meals
         <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-xl" style={{ backgroundColor: `${category.color}22` }}>
           {category.emoji}
         </span>
-        <Link href={`/?category=${category.id}`} className="min-w-0 flex-1">
+        <Link href={`/search?category=${category.id}`} className="min-w-0 flex-1">
           <span className="block truncate font-medium">{category.name}</span>
           <span className="block text-sm text-stone-500">
             {meals} meal{meals === 1 ? "" : "s"}

@@ -25,6 +25,12 @@ macros and micronutrients (vitamins, minerals, choline, omega-3 …).
 4. Redeploy so the new variables take effect.
 The `vercel-build` script runs database migrations on every deploy. It finds the connection string in `DATABASE_URL`, `POSTGRES_URL`, or a prefixed variant such as `MEAL_DB_DATABASE_URL`.
 
+## Phone app
+
+The iPhone app lives in `mobile/` (Expo). It uses this site as its backend through `/api/app/*`,
+with sign-in via Apple, Google or Microsoft. Setup, App Store steps and the environment variables
+are in [mobile/README.md](mobile/README.md).
+
 ## Local development
 
 ```bash
