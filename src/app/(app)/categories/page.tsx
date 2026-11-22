@@ -17,7 +17,7 @@ export default async function CategoriesPage() {
     <div className="mx-auto max-w-2xl space-y-5 sm:space-y-6">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Categories</h1>
+          <h1 className="text-[26px] font-extrabold tracking-tight md:text-3xl">Categories</h1>
           <p className="text-sm text-stone-500">Tag meals to find them quickly, e.g. Weekly meal or Baby dinner.</p>
         </div>
         <AddCategoryButton className="btn-primary shrink-0" />

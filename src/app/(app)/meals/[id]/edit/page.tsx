@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Icon } from "@/components/v7/Icons";
 import { notFound } from "next/navigation";
 import { updateMeal } from "@/app/actions/meals";
 import { MealForm } from "@/components/MealForm";
@@ -12,11 +13,11 @@ export default async function EditMealPage({ params }: PageProps<"/meals/[id]/ed
   if (!meal) notFound();
   return (
     <div className="mx-auto max-w-3xl space-y-4 sm:space-y-5">
-      <div>
-        <Link href={`/meals/${meal.id}`} className="text-sm text-stone-500 hover:text-stone-800">
-          ← Back to meal
+      <div className="flex items-center gap-3">
+        <Link href={`/meals/${meal.id}`} aria-label="Back" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-sand hover:bg-line">
+          <Icon.back className="h-5 w-5" />
         </Link>
-        <h1 className="mt-1 text-2xl leading-tight font-semibold tracking-tight">Edit {meal.name}</h1>
+        <h1 className="min-w-0 text-[26px] leading-tight font-extrabold tracking-tight">Edit {meal.name}</h1>
       </div>
       <MealForm
         action={updateMeal.bind(null, meal.id)}

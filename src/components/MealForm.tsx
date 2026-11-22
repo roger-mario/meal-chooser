@@ -45,7 +45,7 @@ function Section({ title, hint, children }: { title: string; hint?: string; chil
   return (
     <section className="card space-y-4 p-4 sm:p-6">
       <div>
-        <h2 className="text-base font-semibold">{title}</h2>
+        <h2 className="text-[17px] font-extrabold">{title}</h2>
         {hint && <p className="text-sm text-stone-500">{hint}</p>}
       </div>
       {children}
@@ -441,7 +441,7 @@ export function MealForm({
       <div className="sticky bottom-0 z-10 -mx-4 flex flex-col gap-2 border-t border-stone-200 bg-stone-50/95 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur sm:flex-row sm:items-center sm:justify-end sm:gap-4">
         {state?.error && <p className="text-sm text-red-600 sm:mr-auto">{state.error}</p>}
         <SubmitButton pendingText="Saving…" className="btn-primary h-12 w-full text-base sm:h-auto sm:w-auto sm:text-sm">
-          {initial ? "Save changes" : "Save meal"}
+          {initial ? "Save changes" : "Save recipe"}
         </SubmitButton>
       </div>
     </form>

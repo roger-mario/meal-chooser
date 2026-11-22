@@ -24,7 +24,7 @@ export function CategoryFilter({
     params.delete("category");
     if (categoryId) params.set("category", String(categoryId));
     if (q) params.set("q", q);
-    return params.size ? `/?${params}` : "/";
+    return params.size ? `/search?${params}` : "/search";
   };
   const [showNames, setShowNames] = useState(false);
   useEffect(() => {

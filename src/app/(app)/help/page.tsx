@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 function Section({ id, title, children }: { id: string; title: string; children: React.ReactNode }) {
   return (
     <section id={id} className="card scroll-mt-20 space-y-3 p-4 text-sm sm:p-6 leading-relaxed text-stone-700">
-      <h2 className="text-lg font-semibold text-stone-900">{title}</h2>
+      <h2 className="text-lg font-extrabold">{title}</h2>
       {children}
     </section>
   );
@@ -62,7 +62,7 @@ export default async function HelpPage() {
   return (
     <div className="mx-auto max-w-3xl space-y-5">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Help</h1>
+        <h1 className="text-[26px] font-extrabold tracking-tight md:text-3xl">Help</h1>
         <p className="text-sm text-stone-600 sm:text-base">How to share meals, keep a backup and connect other tools.</p>
       </div>
       <nav className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:px-0">

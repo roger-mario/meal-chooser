@@ -77,7 +77,7 @@ export function mealHealth(nutrition: NutritionEstimate | null | undefined): Hea
 }
 
 export function scoreColor(score: number) {
-  if (score >= 75) return "bg-emerald-600 text-white";
+  if (score >= 75) return "bg-green-600 text-white";
   if (score >= 55) return "bg-lime-500 text-white";
   if (score >= 35) return "bg-amber-400 text-stone-900";
   return "bg-orange-500 text-white";

@@ -1,36 +1,111 @@
 @import "tailwindcss";
 
+/*
+ * Otao v7: warm off-white, coral, soft pastel tiles and Plus Jakarta Sans.
+ * The stone, emerald and green scales are re-tuned so older markup picks up the v7 colours:
+ * stone = warm neutrals, emerald = coral (actions and links), green = mint (healthy, good).
+ */
 @theme inline {
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-jakarta);
+
+  --color-bg: #fffcf8;
+  --color-card: #ffffff;
+  --color-line: #f0e9e0;
+  --color-line-strong: #e5ddd2;
+  --color-ink: #2a2622;
+  --color-ink2: #4f4842;
+  --color-muted: #6f6860;
+  --color-off: #9a9188;
+  --color-sand: #f6f1ea;
+  --color-coral: #ff7f5c;
+  --color-coral-ink: #a6402a;
+  --color-peach: #ffe3d3;
+  --color-like: #f0475c;
+  --color-mint: #e2f3e6;
+  --color-mint-ink: #1e6b45;
+  --color-leaf: #57b884;
+  --color-butter: #fff2cc;
+  --color-butter-ink: #7a5a00;
+  --color-sky: #e4f0fb;
+  --color-sky-ink: #1f5a8a;
+  --color-blush: #fbe4ec;
+
+  --color-stone-50: #fffcf8;
+  --color-stone-100: #f6f1ea;
+  --color-stone-200: #f0e9e0;
+  --color-stone-300: #e5ddd2;
+  --color-stone-400: #9a9188;
+  --color-stone-500: #6f6860;
+  --color-stone-600: #5c554f;
+  --color-stone-700: #4f4842;
+  --color-stone-800: #3a3530;
+  --color-stone-900: #2a2622;
+
+  --color-emerald-50: #fff4ee;
+  --color-emerald-100: #ffe3d3;
+  --color-emerald-200: #ffcdb8;
+  --color-emerald-300: #ffb59e;
+  --color-emerald-400: #ff9a7c;
+  --color-emerald-500: #ff7f5c;
+  --color-emerald-600: #e0603c;
+  --color-emerald-700: #b4482b;
+  --color-emerald-800: #a6402a;
+  --color-emerald-900: #7e2e1c;
+
+  --color-green-50: #f1faf3;
+  --color-green-100: #e2f3e6;
+  --color-green-200: #c6e7cf;
+  --color-green-500: #57b884;
+  --color-green-600: #3e9a69;
+  --color-green-700: #1e6b45;
+  --color-green-800: #24533a;
+  --color-green-900: #173f2b;
+
+  --radius-card: 22px;
 }
 
 body {
-  @apply bg-stone-50 text-stone-900;
+  @apply bg-bg text-ink;
   -webkit-tap-highlight-color: transparent;
 }
 
 @utility btn {
-  @apply inline-flex items-center justify-center gap-2 min-h-10 rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm font-medium whitespace-nowrap transition select-none hover:bg-stone-100 active:scale-[0.98] disabled:opacity-50;
+  @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-line-strong bg-white px-4 py-2 text-sm font-bold whitespace-nowrap text-ink transition select-none hover:bg-sand active:scale-[0.98] disabled:opacity-50;
 }
 @utility btn-primary {
-  @apply btn border-emerald-700 bg-emerald-700 text-white hover:bg-emerald-800;
+  @apply btn border-coral bg-coral font-extrabold text-ink hover:border-[#f26e4a] hover:bg-[#f26e4a];
+}
+@utility btn-dark {
+  @apply btn border-ink bg-ink text-white hover:bg-stone-800;
 }
 @utility btn-danger {
-  @apply btn border-red-300 text-red-700 hover:bg-red-50;
+  @apply btn border-red-200 text-red-700 hover:bg-red-50;
 }
 /* 16px text on phones, otherwise iOS zooms in when a field is focused. */
 @utility input {
-  @apply w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-base sm:text-sm focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/20;
+  @apply w-full rounded-2xl border border-line-strong bg-white px-4 py-2.5 text-base text-ink placeholder:text-off focus:border-coral focus:ring-4 focus:ring-coral/15 focus:outline-none sm:text-sm;
 }
 @utility label {
-  @apply mb-1 block text-sm font-medium text-stone-700;
+  @apply mb-1.5 block text-sm font-bold text-ink2;
 }
 /* Space for the phone tab bar and the iPhone home indicator. */
 @utility pb-safe {
   padding-bottom: env(safe-area-inset-bottom);
 }
 @utility card {
-  @apply rounded-xl border border-stone-200 bg-white shadow-sm;
+  @apply rounded-[22px] border border-line bg-white;
+}
+@utility chip {
+  @apply inline-flex h-9 items-center gap-1.5 rounded-full border border-line-strong bg-white px-3.5 text-sm font-bold whitespace-nowrap text-ink transition hover:bg-sand;
+}
+@utility chip-on {
+  @apply chip border-ink bg-ink text-white hover:bg-stone-800;
+}
+@utility no-scrollbar {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 @keyframes ai-progress {
@@ -39,5 +114,60 @@ body {
   }
   100% {
     transform: translateX(300%);
+  }
+}
+
+/* The Otao loader: vegetables hop into the bowl, the leaf sways, the sun turns. */
+@keyframes ot-hop {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  30% {
+    transform: translateY(-16px);
+  }
+  55% {
+    transform: translateY(0);
+  }
+  68% {
+    transform: translateY(-4px);
+  }
+  80% {
+    transform: translateY(0);
+  }
+}
+@keyframes ot-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes ot-sway {
+  0%,
+  100% {
+    transform: rotate(-7deg);
+  }
+  50% {
+    transform: rotate(7deg);
+  }
+}
+.ot-veg {
+  transform-box: fill-box;
+  animation: ot-hop 1.5s ease-in-out infinite;
+}
+.ot-sun {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: ot-spin 7s linear infinite;
+}
+.ot-leaf {
+  transform-box: fill-box;
+  transform-origin: 95% 60%;
+  animation: ot-sway 2.6s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ot-veg,
+  .ot-sun,
+  .ot-leaf {
+    animation: none;
   }
 }

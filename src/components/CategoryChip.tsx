@@ -5,7 +5,7 @@ export function CategoryChip({ category, showName = false }: { category: Categor
   return (
     <span
       title={category.name}
-      className="group inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium"
+      className="group inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold"
       style={{ backgroundColor: `${category.color}1f`, color: category.color }}
     >
       <span className="text-sm leading-none">{category.emoji}</span>

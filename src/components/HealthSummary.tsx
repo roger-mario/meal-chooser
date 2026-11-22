@@ -21,7 +21,7 @@ export function HealthSummary({ nutrition }: { nutrition: NutritionEstimate }) {
               key={b.key}
               title={b.detail}
               className={`rounded-full px-2.5 py-1 text-xs font-medium ${
-                b.tone === "good" ? "bg-emerald-100 text-emerald-900" : "bg-amber-100 text-amber-900"
+                b.tone === "good" ? "bg-green-100 text-green-900" : "bg-amber-100 text-amber-900"
               }`}
             >
               {b.emoji} {b.label} <span className="font-normal opacity-75">· {b.detail}</span>
@@ -37,7 +37,7 @@ export function HealthSummary({ nutrition }: { nutrition: NutritionEstimate }) {
             .map((p) => (
               <li key={p.label} className="flex justify-between gap-2">
                 <span className="text-stone-600">{p.label}</span>
-                <span className={`tabular-nums ${p.points > 0 ? "text-emerald-700" : "text-amber-700"}`}>
+                <span className={`tabular-nums ${p.points > 0 ? "text-green-700" : "text-amber-700"}`}>
                   {p.points > 0 ? "+" : ""}
                   {p.points}
                 </span>

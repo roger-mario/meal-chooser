@@ -29,7 +29,7 @@ export default async function CookPage({ searchParams }: PageProps<"/cook">) {
   return (
     <div className="space-y-5 sm:space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">What can I cook?</h1>
+        <h1 className="text-[26px] font-extrabold tracking-tight md:text-3xl">What can I cook?</h1>
         <p className="text-sm text-stone-600 sm:text-base">Add what you have at home and see which meals you can (almost) make.</p>
       </div>
       {collection && (

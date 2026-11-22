@@ -56,7 +56,7 @@ export function PantryMatcher({ meals, suggestions }: { meals: MealLite[]; sugge
   return (
     <div className="grid gap-4 sm:gap-6 lg:grid-cols-5">
       <section className="card h-fit space-y-4 p-4 sm:p-5 lg:col-span-2">
-        <h2 className="font-semibold">🧺 I have…</h2>
+        <h2 className="font-extrabold">I have…</h2>
         <form
           onSubmit={(e) => {
             e.preventDefault();

@@ -9,7 +9,7 @@ export function LoginForm({ next }: { next: string }) {
     <form action={action} className="space-y-3">
       <input type="hidden" name="next" value={next} />
       <label className="block space-y-1.5">
-        <span className="text-sm font-medium text-stone-700">Password</span>
+        <span className="text-sm font-bold text-ink2">Password</span>
         <input
           type="password"
           name="password"

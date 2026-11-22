@@ -4,27 +4,24 @@ import { CostPanel } from "./CostPanel";
 import { HealthSummary } from "./HealthSummary";
 import { MealView } from "./MealView";
 import { NutritionPanel } from "./NutritionPanel";
+import { Fold } from "./v7/Fold";
+import { Wordmark } from "./v7/Logo";
 
 // Used by the public pages (shared links, the recipe collection). Nothing here may import server actions.
 
 export function PublicHeader({ badge, short, href }: { badge: string; short: string; href?: string }) {
-  const logo = (
-    <>
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src="/icon.svg" alt="" width={28} height={28} className="h-7 w-7" /> Otao
-    </>
-  );
+  const logo = <Wordmark size={22} />;
   return (
-    <header className="border-b border-stone-200 bg-white pt-[env(safe-area-inset-top)]">
-      <div className="mx-auto flex h-14 max-w-5xl items-center gap-2 px-4 text-lg font-semibold tracking-tight">
+    <header className="border-b border-line bg-bg/90 pt-[env(safe-area-inset-top)] backdrop-blur">
+      <div className="mx-auto flex h-14 max-w-3xl items-center gap-2 px-4">
         {href ? (
-          <Link href={href} className="flex items-center gap-2">
+          <Link href={href} aria-label="Otao" className="flex items-center gap-2">
             {logo}
           </Link>
         ) : (
           logo
         )}
-        <span className="ml-auto rounded-full bg-stone-100 px-3 py-1 text-xs font-normal text-stone-500">
+        <span className="ml-auto rounded-full bg-sand px-3 py-1 text-xs font-bold text-muted">
           <span className="sm:hidden">{short}</span>
           <span className="hidden sm:inline">{badge}</span>
         </span>
@@ -39,22 +36,19 @@ export function PublicMealSections({ meal }: { meal: MealWithCategories }) {
     <>
       <MealView meal={meal} />
       {meal.nutrition && (
-        <section className="card space-y-3 p-4 sm:p-6">
-          <h2 className="text-lg font-semibold">✨ Otao score</h2>
+        <Fold title="Otao score" open>
           <HealthSummary nutrition={meal.nutrition} />
-        </section>
+        </Fold>
       )}
       {meal.cost && meal.cost.items.length > 0 && (
-        <section className="card space-y-4 p-4 sm:p-6">
-          <h2 className="text-lg font-semibold">💰 Cost at {meal.cost.store}</h2>
+        <Fold title={`Cost at ${meal.cost.store}`}>
           <CostPanel cost={meal.cost} servings={meal.servings} />
-        </section>
+        </Fold>
       )}
       {meal.nutrition && (
-        <section className="card space-y-4 p-4 sm:p-6">
-          <h2 className="text-lg font-semibold">🥗 Nutrition per serving</h2>
+        <Fold title="Nutrition per serving">
           <NutritionPanel nutrition={meal.nutrition} />
-        </section>
+        </Fold>
       )}
     </>
   );
