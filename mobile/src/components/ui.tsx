@@ -17,6 +17,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { SvgXml } from "react-native-svg";
 import { dishSvg, foodFor, type Kind } from "@/lib/art";
 import { avatarColors, C, F, initials, tileFor } from "@/lib/theme";
+import { LogoLoader } from "./Logo";
 
 type Weight = keyof typeof F;
 
@@ -180,7 +181,7 @@ export function Empty({ title, text, action }: { title: string; text: string; ac
 export function Loading() {
   return (
     <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: C.bg }}>
-      <ActivityIndicator color={C.coral} />
+      <LogoLoader size={120} />
     </View>
   );
 }

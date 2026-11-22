@@ -1,6 +1,6 @@
 import { useRouter } from "expo-router";
 import { useRef, useState, type ReactNode } from "react";
-import { Animated, Pressable, ScrollView, useWindowDimensions, View, type ScrollViewInstance } from "react-native";
+import { Animated, Platform, Pressable, ScrollView, useWindowDimensions, View, type ScrollViewInstance } from "react-native";
 import Svg, { Circle, Ellipse, Path } from "react-native-svg";
 import type { MealSummary, PlanEntry } from "@/lib/api";
 import { addDays, shortDate } from "@/lib/dates";
@@ -29,6 +29,8 @@ export function PlanStrip({ today, entries, meal, onFill, filling }: { today: st
   const pageW = width - 32;
   const ref = useRef<ScrollViewInstance>(null);
   const [page, setPage] = useState(0);
+  // The card height only follows once a swipe has come to rest, so it never jumps mid-swipe.
+  const [settled, setSettled] = useState(0);
   const [heights, setHeights] = useState<number[]>([]);
   // The dark tab highlight slides along with the cards while you swipe.
   const [scrollX] = useState(() => new Animated.Value(0));
@@ -44,6 +46,7 @@ export function PlanStrip({ today, entries, meal, onFill, filling }: { today: st
 
   function go(i: number) {
     setPage(i);
+    setSettled(i);
     ref.current?.scrollTo({ x: i * (pageW + 12), animated: true });
   }
 
@@ -91,16 +94,23 @@ export function PlanStrip({ today, entries, meal, onFill, filling }: { today: st
       <Animated.ScrollView
         ref={ref}
         horizontal
-        style={heights[page] ? { height: heights[page] } : undefined}
+        style={heights[settled] ? { height: heights[settled] } : undefined}
         showsHorizontalScrollIndicator={false}
         snapToInterval={pageW + 12}
+        snapToAlignment="start"
+        // One swipe moves exactly one card, however hard you flick.
+        disableIntervalMomentum
         decelerationRate="fast"
+        onMomentumScrollEnd={(e) => setSettled(Math.max(0, Math.min(PAGES.length - 1, Math.round(e.nativeEvent.contentOffset.x / step))))}
         scrollEventThrottle={32}
         onScroll={Animated.event([{ nativeEvent: { contentOffset: { x: scrollX } } }], {
           useNativeDriver: false,
           listener: (e: { nativeEvent: { contentOffset: { x: number } } }) => {
             const i = Math.round(e.nativeEvent.contentOffset.x / step);
-            if (i !== page && i >= 0 && i < PAGES.length) setPage(i);
+            if (i !== page && i >= 0 && i < PAGES.length) {
+              setPage(i);
+              if (Platform.OS === "web") setSettled(i);
+            }
           },
         })}
         contentContainerStyle={{ gap: 12, paddingHorizontal: 16, alignItems: "flex-start" }}

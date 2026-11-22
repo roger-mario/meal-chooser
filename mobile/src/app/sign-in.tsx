@@ -2,18 +2,20 @@ import * as AppleAuthentication from "expo-apple-authentication";
 import { useState } from "react";
 import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import Svg, { Path } from "react-native-svg";
 import { inputStyle } from "@/components/SaveSheet";
-import { Button, Dish, T } from "@/components/ui";
+import { Icon } from "@/components/icons";
+import { Logo, Wordmark } from "@/components/Logo";
+import { Button, T } from "@/components/ui";
 import { ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { providerReady, signInWith, type Provider, type ProviderResult } from "@/lib/oauth";
 import { C } from "@/lib/theme";
 
-const HERO = [
-  { id: 2, name: "Sweet potato bowl", imageUrl: null },
-  { id: 3, name: "Tuna patties", imageUrl: null },
-  { id: 4, name: "Salmon traybake", imageUrl: null },
-  { id: 5, name: "Chicken casserole", imageUrl: null },
+const POINTS = [
+  { bg: C.peach, icon: <Icon.feed size={20} color={C.coralInk} />, text: "Recipes from friends and family" },
+  { bg: C.mint, icon: <Icon.plan size={20} color={C.mintInk} />, text: "One plan for your whole household" },
+  { bg: C.butter, icon: <Icon.leaf size={20} />, text: "Every vitamin and mineral, not just calories" },
 ];
 
 export default function SignIn() {
@@ -23,6 +25,8 @@ export default function SignIn() {
   const [code, setCode] = useState("");
   const [reviewMode, setReviewMode] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // First the intro, then the sign-in buttons. "back" is true for people who already have an account.
+  const [stage, setStage] = useState<"intro" | "new" | "back">("intro");
 
   async function start(provider: Provider) {
     setError(null);
@@ -64,21 +68,64 @@ export default function SignIn() {
 
   const askCode = !!pending || reviewMode;
 
+  if (stage === "intro" && !askCode) {
+    return (
+      <View style={{ flex: 1, backgroundColor: C.bg }}>
+        <View style={{ backgroundColor: C.sky, paddingBottom: 8 }}>
+          <SafeAreaView edges={["top"]} style={{ alignItems: "center", paddingTop: 28, gap: 26 }}>
+            <Wordmark size={26} />
+            <Pressable accessibilityLabel="Otao" onLongPress={() => setReviewMode(true)} delayLongPress={1500}>
+              <Logo size={250} />
+            </Pressable>
+          </SafeAreaView>
+          <Svg width="100%" height={48} viewBox="0 0 390 48" preserveAspectRatio="none" style={{ position: "absolute", left: 0, right: 0, bottom: -47 }}>
+            <Path d="M0 0 H390 V22 C 320 52, 250 46, 190 30 S 70 6, 0 30 Z" fill={C.sky} />
+          </Svg>
+        </View>
+        <SafeAreaView edges={["bottom"]} style={{ flex: 1, paddingHorizontal: 24, paddingTop: 56, paddingBottom: 12, gap: 22 }}>
+          <View style={{ gap: 10 }}>
+            <T w="extrabold" s={30} style={{ letterSpacing: -0.6, lineHeight: 35 }}>
+              Easy, healthy food you’ll actually cook
+            </T>
+          </View>
+          <View style={{ gap: 14 }}>
+            {POINTS.map((p) => (
+              <View key={p.text} style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
+                <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: p.bg, alignItems: "center", justifyContent: "center" }}>{p.icon}</View>
+                <T s={16} color={C.ink2} style={{ flex: 1 }}>
+                  {p.text}
+                </T>
+              </View>
+            ))}
+          </View>
+          <View style={{ flex: 1 }} />
+          <View style={{ gap: 6 }}>
+            <Button label="Get started" size="lg" onPress={() => setStage("new")} />
+            <Button label="I already have an account" kind="ghost" onPress={() => setStage("back")} />
+          </View>
+        </SafeAreaView>
+      </View>
+    );
+  }
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }}>
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={{ flexGrow: 1, padding: 20, gap: 18 }} keyboardShouldPersistTaps="handled">
-          <Pressable accessibilityLabel="Otao" onLongPress={() => setReviewMode(true)} delayLongPress={1500} style={{ height: 250, borderRadius: 28, backgroundColor: C.peach, padding: 12, flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
-            {HERO.map((m) => (
-              <Dish key={m.id} meal={m} style={{ width: "48%", height: 107 }} radius={18} />
-            ))}
-          </Pressable>
+          {!askCode && (
+            <Pressable accessibilityRole="button" accessibilityLabel="Back" onPress={() => setStage("intro")} style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: C.card, borderWidth: 1, borderColor: C.line, alignItems: "center", justifyContent: "center" }}>
+              <Icon.back />
+            </Pressable>
+          )}
+          <View style={{ alignItems: "center", paddingVertical: 12 }}>
+            <Logo size={130} />
+          </View>
           <View style={{ gap: 8 }}>
-            <T w="extrabold" s={30} style={{ letterSpacing: -0.6, lineHeight: 34 }}>
-              Easy, healthy food you’ll actually cook
+            <T w="extrabold" s={28} style={{ letterSpacing: -0.5, lineHeight: 33 }}>
+              {stage === "back" ? "Welcome back" : "Create your account"}
             </T>
             <T s={16} color={C.ink2} style={{ lineHeight: 23 }}>
-              Recipes from friends, a plan you share with your household, and what’s really in your food.
+              {stage === "back" ? "Sign in the same way you did before." : "Pick how you want to sign in. Otao is invite-only for now, so have the code a friend sent you ready."}
             </T>
           </View>
 

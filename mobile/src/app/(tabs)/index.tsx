@@ -12,6 +12,7 @@ import { useData } from "@/lib/data";
 import { useNavScroll, useNavSpace } from "@/lib/navbar";
 import { addDays, isoDay } from "@/lib/dates";
 import { addToPlan, usePlan } from "@/lib/plan";
+import { pickGreeting } from "@/lib/greeting";
 import { pantryMatch, usePrefs } from "@/lib/prefs";
 import { suggestFor } from "@/lib/taste";
 import { C } from "@/lib/theme";
@@ -27,6 +28,8 @@ export default function Home() {
   const [lib, setLib] = useState<Lib>("mine");
   const [filling, setFilling] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
+  // Picked once per app open, so the line stays put while you use Home.
+  const [greetSeed] = useState(() => Math.random());
   const onScroll = useNavScroll();
   const bottom = useNavSpace();
 
@@ -60,9 +63,9 @@ export default function Home() {
   return (
     <SafeAreaView edges={["top"]} style={{ flex: 1, backgroundColor: C.bg }}>
       <ScrollView onScroll={onScroll} scrollEventThrottle={32} contentContainerStyle={{ paddingTop: 14, gap: 20, flexGrow: 1 }} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void Promise.all([refresh(), reload()])} tintColor={C.coral} />}>
-        <View style={{ paddingHorizontal: 16, flexDirection: "row", alignItems: "center", gap: 12 }}>
-          <T w="extrabold" s={22} numberOfLines={1} style={{ flex: 1, letterSpacing: -0.4, lineHeight: 28 }}>
-            What’s cooking, {firstName}?
+        <View style={{ paddingHorizontal: 16, marginBottom: 10, flexDirection: "row", alignItems: "center", gap: 12 }}>
+          <T w="extrabold" s={22} numberOfLines={1} adjustsFontSizeToFit style={{ flex: 1, letterSpacing: -0.4, lineHeight: 28 }}>
+            {pickGreeting(firstName, new Date(), greetSeed)}
           </T>
           <Pressable accessibilityRole="button" accessibilityLabel="Add" onPress={() => setAdding(true)} style={({ pressed }) => ({ width: 44, height: 44, borderRadius: 22, backgroundColor: C.coral, alignItems: "center", justifyContent: "center", opacity: pressed ? 0.85 : 1 })}>
             <Icon.plus size={22} />

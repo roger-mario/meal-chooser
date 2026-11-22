@@ -1,4 +1,4 @@
-import { Tabs } from "expo-router";
+import { TopTabs } from "expo-router/js-top-tabs";
 import { Animated, Pressable, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Icon } from "@/components/icons";
@@ -15,7 +15,7 @@ const TABS = [
 
 type BarProps = { routes: { key: string; name: string }[]; index: number; go: (key: string) => void };
 
-/** A floating, rounded tab bar that gets a touch smaller while you scroll down. */
+/** A floating, rounded tab bar that gets a touch smaller while you scroll down. Swiping the screens left and right also moves between tabs. */
 function FloatingBar({ routes, index, go }: BarProps) {
   const insets = useSafeAreaInsets();
   const { compact } = useNavBar();
@@ -68,11 +68,12 @@ function FloatingBar({ routes, index, go }: BarProps) {
 export default function TabsLayout() {
   return (
     <NavBarProvider>
-      <Tabs screenOptions={{ headerShown: false, sceneStyle: { backgroundColor: C.bg } }} tabBar={({ state, navigateToTab }) => <FloatingBar routes={state.routes} index={state.index} go={navigateToTab} />}>
+      {/* A pager underneath, so you can swipe left and right between the main tabs. */}
+      <TopTabs tabBarPosition="bottom" screenOptions={{ sceneStyle: { backgroundColor: C.bg }, lazy: true }} tabBar={({ state, navigateToTab }) => <FloatingBar routes={state.routes} index={state.index} go={navigateToTab} />}>
         {TABS.map((t) => (
-          <Tabs.Screen key={t.name} name={t.name} />
+          <TopTabs.Screen key={t.name} name={t.name} />
         ))}
-      </Tabs>
+      </TopTabs>
     </NavBarProvider>
   );
 }
