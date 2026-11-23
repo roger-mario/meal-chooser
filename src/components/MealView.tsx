@@ -5,7 +5,7 @@ import { DIETS, DIFFICULTIES, formatQuantity, linkIcon, linkLabel } from "@/lib/
 import type { MealWithCategories } from "@/lib/queries";
 import { AuthorLine } from "./AuthorLine";
 import { CategoryChip } from "./CategoryChip";
-import { Dish, ScoreChip } from "./v7/Dish";
+import { Dish, ScoreChip, StepArt } from "./v7/Dish";
 import { Fold } from "./v7/Fold";
 
 /** Hero, facts, ingredients and steps; shared by the recipe page and the public share page. */
@@ -119,7 +119,10 @@ export function MealView({
             {meal.steps.map((s, i) => (
               <li key={i} className="flex gap-3">
                 <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-ink text-sm font-extrabold text-white">{i + 1}</span>
-                <p className="pt-0.5 leading-relaxed">{s}</p>
+                <div className="min-w-0 flex-1 space-y-2">
+                  <p className="pt-0.5 leading-relaxed">{s}</p>
+                  <StepArt meal={meal} index={i} count={meal.steps.length} step={s} />
+                </div>
               </li>
             ))}
           </ol>

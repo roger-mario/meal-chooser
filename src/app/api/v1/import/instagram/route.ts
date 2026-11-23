@@ -16,7 +16,7 @@ const bodySchema = z.object({
   limit: z.number().int().min(1).max(25).optional(),
   /** Only read the recipes, don't save them. */
   dryRun: z.boolean().optional(),
-  /** Use Instagram's preview picture as the meal photo (default true). */
+  /** Use Instagram's preview picture as the meal photo (default false: covers often show the creator). */
   photo: z.boolean().optional(),
   categories: z.array(z.string().trim().min(1).max(100)).max(10).optional(),
   minQuality: z.number().int().min(1).max(5).optional(),

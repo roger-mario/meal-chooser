@@ -75,3 +75,15 @@ export function dishSvg(f: Food, seed: string, kind?: Kind): string {
   if (k !== 'board' && k !== 'pan') o = leaves(r, 3, '#7FB069') + o;
   return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 150" preserveAspectRatio="xMidYMid slice">' + o + '</svg>';
 }
+
+/** Illustration for one cooking step: what the step does (chop → board, fry → pan …); the last step shows the dish. */
+export function stepKind(step: string, index: number, count: number, dish: Food): Kind {
+  if (index === count - 1) return dish.kind;
+  const s = step.toLowerCase();
+  if (/\b(bake|oven|roast|air ?fr|broil|preheat)/.test(s)) return "tray";
+  if (/\b(boil|simmer|rice|pasta|noodle|quinoa|potatoes?\b.*water|stock|broth)/.test(s)) return "pot";
+  if (/\b(fry|sear|brown|saut|grill|pan|skillet|heat the oil|cook the (beef|chicken|meat|turkey|mince))/.test(s)) return "pan";
+  if (/\b(chop|dice|slice|mince|cut|grate|shred|peel|trim|crush)/.test(s)) return "board";
+  if (/\b(mix|combine|whisk|stir together|toss|marinate|season|assemble|divide|layer|top with|serve)/.test(s)) return "bowl";
+  return index === 0 ? "board" : "pan";
+}

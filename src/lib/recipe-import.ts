@@ -105,7 +105,8 @@ export function recipeToMealInput(post: InstagramPost, r: ParsedRecipe, opts: { 
       ...(post.creatorUrl ? [{ url: post.creatorUrl, label: `${by} on Instagram` }] : []),
     ],
     categories: [...new Set([RECREATED, ...(opts.categories ?? []), ...r.categories])],
-    imageUrl: opts.photo !== false ? post.thumbnailUrl : null,
+    // Covers usually show the creator rather than the food, so they are only used when asked for.
+    imageUrl: opts.photo ? post.thumbnailUrl : null,
   };
 }
 

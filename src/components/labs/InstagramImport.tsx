@@ -9,7 +9,7 @@ type Row = { link: string; result?: LinkImport; running?: boolean };
 export function InstagramImport({ canList }: { canList: boolean }) {
   const [text, setText] = useState("");
   const [creator, setCreator] = useState("");
-  const [photo, setPhoto] = useState(true);
+  const [photo, setPhoto] = useState(false);
   const [rows, setRows] = useState<Row[]>([]);
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<string | null>(null);
@@ -83,7 +83,7 @@ export function InstagramImport({ canList }: { canList: boolean }) {
         />
         <label className="flex items-center gap-2 text-sm">
           <input type="checkbox" checked={photo} onChange={(e) => setPhoto(e.target.checked)} />
-          Use the reel&apos;s cover picture as the photo
+          Use the reel&apos;s cover picture as the photo (often shows the creator, not the food; without it the recipe gets an illustration)
         </label>
         <button type="button" className="btn-primary" disabled={busy || !links.length} onClick={run}>
           {busy ? "Importing…" : `Import ${links.length || ""} recipe${links.length === 1 ? "" : "s"}`}
