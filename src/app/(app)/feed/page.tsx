@@ -43,6 +43,8 @@ export default async function FeedPage() {
         const n = likes.get(m.id) ?? 0;
         // White text over a dark fade on photos, ink text straight on the pastel tile otherwise.
         const photo = !!m.imageUrl;
+        // Imported recipes link back to the creator's original video.
+        const reel = m.links.find((l) => /instagram\.com\/(reel|p|tv)\//.test(l.url));
         return (
           <article key={m.id} className="relative h-full snap-start snap-always overflow-hidden md:mb-4 md:rounded-[28px]" style={{ backgroundColor: tileFor(m.id) }}>
             {/* Photos fill the card; an illustration sits in the top part on its pastel tile. */}
@@ -73,6 +75,11 @@ export default async function FeedPage() {
                 <Link href={`/meals/${m.id}`} className="btn h-12 bg-white/95">
                   Recipe
                 </Link>
+                {reel && (
+                  <a href={reel.url} target="_blank" rel="noreferrer" className="btn h-12 bg-white/95" title={reel.label}>
+                    ▶ Reel
+                  </a>
+                )}
               </div>
             </div>
           </article>

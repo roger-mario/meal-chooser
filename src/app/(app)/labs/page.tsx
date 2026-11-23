@@ -35,6 +35,12 @@ const EXPERIMENTS = [
     title: "Recipe folder & GitHub backup",
     text: "Your recipes as files (data, a readable page and the photo per recipe). Download them, import them in another Otao, or keep them versioned in your own GitHub repository.",
   },
+  {
+    href: "/labs/import",
+    emoji: "📥",
+    title: "Import recipes from Instagram",
+    text: "Paste links to recipe reels from creators you like. Otao writes each one up as a recipe with amounts and steps, credits the creator and keeps it private.",
+  },
 ];
 
 export default async function LabsPage() {
