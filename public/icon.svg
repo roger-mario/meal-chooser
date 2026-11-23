@@ -1,8 +1,30 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#EAF3FC"/><stop offset="1" stop-color="#DCEBF9"/></linearGradient></defs><rect width="512" height="512" rx="112" fill="url(#bg)"/><g transform="translate(256 262) scale(2.5) translate(-88 -56)"><path d="M8 40 C 22 18, 48 16, 58 28 C 46 44, 24 50, 8 40 Z" fill="#57B884"/>
-  <path d="M10 40 C 26 34, 40 30, 56 28" stroke="#3E8F63" stroke-width="2" fill="none" stroke-linecap="round"/>
-  <ellipse cx="92" cy="58" rx="48" ry="12" fill="#FFFDF5"/>
-  <circle cx="74" cy="54" r="9" fill="#F28C3B"/><circle cx="92" cy="50" r="10" fill="#4E9A50"/><circle cx="110" cy="55" r="8" fill="#E8473B"/><circle cx="100" cy="60" r="6" fill="#F7DC5B"/><circle cx="82" cy="61" r="5" fill="#A8CC6E"/>
-  <path d="M44 58 C 46 86, 66 100, 92 100 C 118 100, 138 86, 140 58 Z" fill="#FF7F5C"/>
-  <path d="M52 70 C 60 72, 124 72, 132 70" stroke="#FFB59E" stroke-width="3" fill="none" stroke-linecap="round"/>
-  <circle cx="150" cy="26" r="17" fill="#F5D34A"/><circle cx="150" cy="26" r="13" fill="#FFF2A8"/>
-  <path d="M150 14 V38 M138 26 H162 M141.5 17.5 L158.5 34.5 M158.5 17.5 L141.5 34.5" stroke="#F5D34A" stroke-width="1.6"/></g></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#059669"/>
+      <stop offset="1" stop-color="#064e3b"/>
+    </linearGradient>
+    <linearGradient id="food" x1="0" y1="1" x2="0" y2="0">
+      <stop offset="0" stop-color="#ff5e3a"/>
+      <stop offset="1" stop-color="#ffc14d"/>
+    </linearGradient>
+    <linearGradient id="bowl" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fffaf0"/>
+      <stop offset="1" stop-color="#fde7c2"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+  <g fill="none" stroke="#fef3c7" stroke-width="16" stroke-linecap="round" opacity=".85">
+    <path d="M200 150c-14-18 14-32 0-54"/>
+    <path d="M256 136c-14-20 14-36 0-60"/>
+    <path d="M312 150c-14-18 14-32 0-54"/>
+  </g>
+  <path fill="url(#food)" d="M118 266c14-46 70-74 138-74s124 28 138 74z"/>
+  <circle cx="190" cy="232" r="15" fill="#fde68a" opacity=".9"/>
+  <circle cx="318" cy="236" r="13" fill="#fde68a" opacity=".9"/>
+  <circle cx="246" cy="220" r="10" fill="#c2410c" opacity=".55"/>
+  <path fill="#34d399" d="M256 204c-6-30 10-52 40-60 6 30-10 52-40 60z"/>
+  <path fill="#10b981" d="M252 206c-22-20-46-20-64-6 20 18 44 20 64 6z"/>
+  <path fill="url(#bowl)" d="M96 262h320c0 92-70 160-160 160S96 354 96 262z"/>
+  <rect x="84" y="250" width="344" height="28" rx="14" fill="#fffaf0"/>
+</svg>

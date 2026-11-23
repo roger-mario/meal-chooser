@@ -24,7 +24,7 @@ const config: ExpoConfig = {
   android: {
     package: bundleId.replace(/\.ios$/, ".android"),
     adaptiveIcon: {
-      backgroundColor: "#FFFCF8",
+      backgroundColor: "#047857",
       foregroundImage: "./assets/android-icon-foreground.png",
       backgroundImage: "./assets/android-icon-background.png",
       monochromeImage: "./assets/android-icon-monochrome.png",
@@ -37,7 +37,7 @@ const config: ExpoConfig = {
     "expo-secure-store",
     "expo-web-browser",
     "expo-font",
-    ["expo-splash-screen", { backgroundColor: "#FFFCF8", image: "./assets/splash-icon.png", imageWidth: 120 }],
+    ["expo-splash-screen", { backgroundColor: "#FFFCF8", image: "./assets/splash-icon.png", imageWidth: 150 }],
   ],
   experiments: { typedRoutes: true },
   extra: {

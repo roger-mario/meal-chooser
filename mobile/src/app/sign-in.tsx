@@ -5,7 +5,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Path } from "react-native-svg";
 import { inputStyle } from "@/components/SaveSheet";
 import { Icon } from "@/components/icons";
-import { Logo, Wordmark } from "@/components/Logo";
+import { Logo, LogoLoader, Wordmark } from "@/components/Logo";
 import { Button, T } from "@/components/ui";
 import { ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -75,7 +75,7 @@ export default function SignIn() {
           <SafeAreaView edges={["top"]} style={{ alignItems: "center", paddingTop: 28, gap: 26 }}>
             <Wordmark size={26} />
             <Pressable accessibilityLabel="Otao" onLongPress={() => setReviewMode(true)} delayLongPress={1500}>
-              <Logo size={250} />
+              <LogoLoader size={190} label={null} />
             </Pressable>
           </SafeAreaView>
           <Svg width="100%" height={48} viewBox="0 0 390 48" preserveAspectRatio="none" style={{ position: "absolute", left: 0, right: 0, bottom: -47 }}>
@@ -118,7 +118,7 @@ export default function SignIn() {
             </Pressable>
           )}
           <View style={{ alignItems: "center", paddingVertical: 12 }}>
-            <Logo size={130} />
+            <Logo size={110} />
           </View>
           <View style={{ gap: 8 }}>
             <T w="extrabold" s={28} style={{ letterSpacing: -0.5, lineHeight: 33 }}>

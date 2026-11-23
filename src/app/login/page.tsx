@@ -10,7 +10,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
     <main className="flex flex-1 flex-col items-center justify-center bg-sky px-4 py-10">
       <div className="w-full max-w-sm space-y-6">
         <div className="flex flex-col items-center gap-4 text-center">
-          <Mark width={200} animated />
+          <Mark width={128} animated className="drop-shadow-[0_14px_28px_rgba(6,78,59,0.25)]" />
           <h1 className="text-4xl font-extrabold tracking-tight">otao</h1>
           <p className="text-[15px] text-ink2">Healthy home cooking, planned together. Otao is invite-only for now.</p>
         </div>
