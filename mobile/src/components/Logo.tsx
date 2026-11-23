@@ -1,138 +1,172 @@
 import { useEffect, useState } from "react";
 import { Animated, Easing, Text, View } from "react-native";
-import Svg, { Circle, Ellipse, G, Path } from "react-native-svg";
+import Svg, { Circle, Defs, G, LinearGradient, Path, Rect, Stop } from "react-native-svg";
 import { C } from "@/lib/theme";
 
-// The Otao mark: a bowl of vegetables with a leaf and a little sun, drawn on a 170 x 104 grid.
-const W = 170;
-const H = 104;
-const VEG = [
-  { cx: 74, cy: 54, r: 9, fill: "#F28C3B" },
-  { cx: 92, cy: 50, r: 10, fill: "#4E9A50" },
-  { cx: 110, cy: 55, r: 8, fill: "#E8473B" },
-  { cx: 100, cy: 60, r: 6, fill: "#F7DC5B" },
-  { cx: 82, cy: 61, r: 5, fill: "#A8CC6E" },
-];
+// The Otao icon: a white bowl of orange food with a leaf and three lines of steam on a green tile,
+// drawn on a 512 x 512 grid. Keep it in step with public/icon.svg and src/components/v7/Logo.tsx.
+const G_SIZE = 512;
+const RADIUS = 112;
+const STEAM = ["M200 150c-14-18 14-32 0-54", "M256 136c-14-20 14-36 0-60", "M312 150c-14-18 14-32 0-54"];
+// When each line of steam starts, in ms after the intro, so they rise one after another.
+const STEAM_DELAY = [350, 0, 700];
 
+const Tile = () => (
+  <>
+    <Defs>
+      <LinearGradient id="otBg" x1="0" y1="0" x2="1" y2="1">
+        <Stop offset="0" stopColor="#059669" />
+        <Stop offset="1" stopColor="#064e3b" />
+      </LinearGradient>
+    </Defs>
+    <Rect width={G_SIZE} height={G_SIZE} rx={RADIUS} fill="url(#otBg)" />
+  </>
+);
+const SteamLine = ({ d }: { d: string }) => <Path d={d} fill="none" stroke="#fef3c7" strokeWidth={16} strokeLinecap="round" opacity={0.85} />;
+const Food = () => (
+  <>
+    <Defs>
+      <LinearGradient id="otFood" x1="0" y1="1" x2="0" y2="0">
+        <Stop offset="0" stopColor="#ff5e3a" />
+        <Stop offset="1" stopColor="#ffc14d" />
+      </LinearGradient>
+    </Defs>
+    <Path fill="url(#otFood)" d="M118 266c14-46 70-74 138-74s124 28 138 74z" />
+    <Circle cx={190} cy={232} r={15} fill="#fde68a" opacity={0.9} />
+    <Circle cx={318} cy={236} r={13} fill="#fde68a" opacity={0.9} />
+    <Circle cx={246} cy={220} r={10} fill="#c2410c" opacity={0.55} />
+  </>
+);
 const Leaf = () => (
   <G>
-    <Path d="M8 40 C 22 18, 48 16, 58 28 C 46 44, 24 50, 8 40 Z" fill={C.green} />
-    <Path d="M10 40 C 26 34, 40 30, 56 28" stroke="#3E8F63" strokeWidth={2} fill="none" strokeLinecap="round" />
-  </G>
-);
-const Sun = () => (
-  <G>
-    <Circle cx={150} cy={26} r={17} fill="#F5D34A" />
-    <Circle cx={150} cy={26} r={13} fill="#FFF2A8" />
-    <Path d="M150 14 V38 M138 26 H162 M141.5 17.5 L158.5 34.5 M158.5 17.5 L141.5 34.5" stroke="#F5D34A" strokeWidth={1.6} />
+    <Path fill="#34d399" d="M256 204c-6-30 10-52 40-60 6 30-10 52-40 60z" />
+    <Path fill="#10b981" d="M252 206c-22-20-46-20-64-6 20 18 44 20 64 6z" />
   </G>
 );
 const Bowl = () => (
-  <G>
-    <Path d="M44 58 C 46 86, 66 100, 92 100 C 118 100, 138 86, 140 58 Z" fill={C.coral} />
-    <Path d="M52 70 C 60 72, 124 72, 132 70" stroke="#FFB59E" strokeWidth={3} fill="none" strokeLinecap="round" />
-  </G>
+  <>
+    <Defs>
+      <LinearGradient id="otBowl" x1="0" y1="0" x2="0" y2="1">
+        <Stop offset="0" stopColor="#fffaf0" />
+        <Stop offset="1" stopColor="#fde7c2" />
+      </LinearGradient>
+    </Defs>
+    <Path fill="url(#otBowl)" d="M96 262h320c0 92-70 160-160 160S96 354 96 262z" />
+    <Rect x={84} y={250} width={344} height={28} rx={14} fill="#fffaf0" />
+  </>
 );
 
-/** The static Otao mark. */
-export function Logo({ size = 170 }: { size?: number }) {
+/** The static Otao icon. */
+export function Logo({ size = 120 }: { size?: number }) {
   return (
-    <Svg width={size} height={(size * H) / W} viewBox={`0 0 ${W} ${H}`}>
-      <Leaf />
-      <Ellipse cx={92} cy={58} rx={48} ry={12} fill="#FFFDF5" />
-      {VEG.map((v) => (
-        <Circle key={v.fill} {...v} />
+    <Svg width={size} height={size} viewBox={`0 0 ${G_SIZE} ${G_SIZE}`}>
+      <Tile />
+      {STEAM.map((d) => (
+        <SteamLine key={d} d={d} />
       ))}
+      <Food />
+      <Leaf />
       <Bowl />
-      <Sun />
     </Svg>
   );
 }
 
-/** "otao" next to the mark, for headers and the intro screen. */
+/** "otao" next to the icon, for headers and the intro screen. */
 export function Wordmark({ size = 34 }: { size?: number }) {
   return (
-    <View style={{ flexDirection: "row", alignItems: "center", gap: size * 0.3 }}>
-      <Logo size={size * 2.1} />
+    <View style={{ flexDirection: "row", alignItems: "center", gap: size * 0.32 }}>
+      <Logo size={size * 1.4} />
       <Text style={{ fontFamily: "PlusJakartaSans_800ExtraBold", fontSize: size, letterSpacing: -size * 0.04, color: C.ink, lineHeight: size * 1.15 }}>otao</Text>
     </View>
   );
 }
 
 /**
- * The mark as a loader: the vegetables hop into the bowl one after another,
- * the leaf sways and the sun turns slowly.
+ * The animated Otao icon: the food drops into the bowl, the bowl wobbles on impact,
+ * then the steam keeps rising. Used as the loader and on the intro screen.
  */
-export function LogoLoader({ size = 150 }: { size?: number }) {
-  const k = size / W;
-  const [hop] = useState(() => VEG.map(() => new Animated.Value(0)));
-  const [spin] = useState(() => new Animated.Value(0));
+export function LogoLoader({ size = 120, label = "Loading" }: { size?: number; label?: string | null }) {
+  const k = size / G_SIZE;
+  const [drop] = useState(() => new Animated.Value(0));
+  const [leaf] = useState(() => new Animated.Value(0));
+  const [wobble] = useState(() => new Animated.Value(0));
+  const [steam] = useState(() => STEAM.map(() => new Animated.Value(0)));
+
   useEffect(() => {
-    const veg = Animated.loop(
+    const fall = (v: Animated.Value, delay: number) =>
+      Animated.timing(v, { toValue: 1, duration: 500, delay, easing: Easing.bezier(0.55, 0, 0.9, 0.45), useNativeDriver: true });
+    const intro = Animated.sequence([
+      Animated.parallel([fall(drop, 150), fall(leaf, 270)]),
+      Animated.timing(wobble, { toValue: 1, duration: 600, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+    ]);
+    const rising = steam.map((v, i) =>
       Animated.sequence([
-        Animated.stagger(
-          110,
-          hop.map((v) =>
-            Animated.sequence([
-              Animated.timing(v, { toValue: 1, duration: 260, easing: Easing.out(Easing.quad), useNativeDriver: true }),
-              Animated.timing(v, { toValue: 0, duration: 320, easing: Easing.bounce, useNativeDriver: true }),
-            ]),
-          ),
-        ),
-        Animated.delay(380),
+        Animated.delay(1050 + STEAM_DELAY[i]),
+        Animated.loop(Animated.timing(v, { toValue: 1, duration: 2400, easing: Easing.inOut(Easing.sin), useNativeDriver: true })),
       ]),
     );
-    const sun = Animated.loop(Animated.timing(spin, { toValue: 1, duration: 6000, easing: Easing.linear, useNativeDriver: true }));
-    veg.start();
-    sun.start();
+    intro.start();
+    rising.forEach((r) => r.start());
     return () => {
-      veg.stop();
-      sun.stop();
+      intro.stop();
+      rising.forEach((r) => r.stop());
     };
-  }, [hop, spin]);
+  }, [drop, leaf, wobble, steam]);
 
-  const layer = { position: "absolute" as const, left: 0, top: 0 };
+  const full = { position: "absolute" as const, left: 0, top: 0, width: size, height: size };
+  const falling = (v: Animated.Value) => ({
+    opacity: v.interpolate({ inputRange: [0, 0.12, 1], outputRange: [0, 1, 1] }),
+    transform: [{ translateY: v.interpolate({ inputRange: [0, 1], outputRange: [-330 * k, 0] }) }],
+  });
+  const at = [0, 0.14, 0.34, 0.54, 0.74, 1];
+  const layer = (children: React.ReactNode) => (
+    <Svg width={size} height={size} viewBox={`0 0 ${G_SIZE} ${G_SIZE}`}>
+      {children}
+    </Svg>
+  );
+
   return (
-    <View accessibilityRole="progressbar" accessibilityLabel="Loading" style={{ width: size, height: H * k }}>
-      <Animated.View style={[layer, { transform: [{ rotate: spin.interpolate({ inputRange: [0, 0.5, 1], outputRange: ["-6deg", "6deg", "-6deg"] }) }] }]}>
-        <Svg width={size} height={H * k} viewBox={`0 0 ${W} ${H}`}>
-          <Leaf />
-        </Svg>
-      </Animated.View>
-      <Svg width={size} height={H * k} viewBox={`0 0 ${W} ${H}`} style={layer}>
-        <Ellipse cx={92} cy={58} rx={48} ry={12} fill="#FFFDF5" />
-      </Svg>
-      {VEG.map((v, i) => (
+    <View
+      accessible={label !== null}
+      accessibilityRole={label ? "progressbar" : "image"}
+      accessibilityLabel={label ?? undefined}
+      style={{ width: size, height: size, borderRadius: RADIUS * k, overflow: "hidden" }}
+    >
+      <View style={full}>{layer(<Tile />)}</View>
+      {STEAM.map((d, i) => (
         <Animated.View
-          key={v.fill}
-          style={{
-            position: "absolute",
-            left: (v.cx - v.r) * k,
-            top: (v.cy - v.r) * k,
-            width: v.r * 2 * k,
-            height: v.r * 2 * k,
-            borderRadius: v.r * k,
-            backgroundColor: v.fill,
-            transform: [{ translateY: hop[i].interpolate({ inputRange: [0, 1], outputRange: [0, -22 * k] }) }],
-          }}
-        />
+          key={d}
+          style={[
+            full,
+            {
+              opacity: steam[i].interpolate({ inputRange: [0, 0.25, 0.6, 1], outputRange: [0, 1, 0.85, 0] }),
+              transform: [
+                { translateX: steam[i].interpolate({ inputRange: [0, 0.6, 1], outputRange: [0, 6 * k, -4 * k] }) },
+                { translateY: steam[i].interpolate({ inputRange: [0, 0.6, 1], outputRange: [18 * k, -12 * k, -40 * k] }) },
+              ],
+            },
+          ]}
+        >
+          {layer(<SteamLine d={d} />)}
+        </Animated.View>
       ))}
-      <Svg width={size} height={H * k} viewBox={`0 0 ${W} ${H}`} style={layer}>
-        <Bowl />
-      </Svg>
       <Animated.View
-        style={{
-          position: "absolute",
-          left: 133 * k,
-          top: 9 * k,
-          width: 34 * k,
-          height: 34 * k,
-          transform: [{ rotate: spin.interpolate({ inputRange: [0, 1], outputRange: ["0deg", "360deg"] }) }],
-        }}
+        style={[
+          full,
+          {
+            transformOrigin: `50% ${(420 / G_SIZE) * 100}%`,
+            transform: [
+              { rotate: wobble.interpolate({ inputRange: at, outputRange: ["0deg", "-4deg", "3deg", "-2deg", "1deg", "0deg"] }) },
+              { translateY: wobble.interpolate({ inputRange: at, outputRange: [0, 7 * k, -3 * k, 1 * k, 0, 0] }) },
+              { scaleX: wobble.interpolate({ inputRange: [0, 0.14, 0.34, 1], outputRange: [1, 1.03, 1, 1] }) },
+              { scaleY: wobble.interpolate({ inputRange: [0, 0.14, 0.34, 1], outputRange: [1, 0.97, 1, 1] }) },
+            ],
+          },
+        ]}
       >
-        <Svg width={34 * k} height={34 * k} viewBox="133 9 34 34">
-          <Sun />
-        </Svg>
+        <Animated.View style={[full, falling(drop)]}>{layer(<Food />)}</Animated.View>
+        <Animated.View style={[full, falling(leaf)]}>{layer(<Leaf />)}</Animated.View>
+        <View style={full}>{layer(<Bowl />)}</View>
       </Animated.View>
     </View>
   );
