@@ -6,6 +6,7 @@ import { db, meals } from "@/db";
 import { UNITS } from "./meal-fields";
 import type { MealInput } from "./meal-input";
 import { createMealFromInput } from "./meal-store";
+import { RECREATED } from "./creators";
 import type { InstagramPost } from "./instagram";
 
 // Turns a creator's caption into an Otao recipe. The AI only reads and tidies what the creator wrote;
@@ -80,7 +81,7 @@ export async function findImported(permalink: string): Promise<number | null> {
 export function recipeToMealInput(post: InstagramPost, r: ParsedRecipe, opts: { photo?: boolean; categories?: string[] } = {}): MealInput {
   const by = post.creator ? `@${post.creator}` : "the creator";
   const credit = `Recipe by ${by} on Instagram.`;
-  const notes = r.filledIn.length ? `\n\nFilled in by Otao: ${r.filledIn.join("; ")}.` : "";
+  const notes = r.filledIn.length ? `\n\nFilled in by Otao: ${r.filledIn.map((x) => x.trim().replace(/\.+$/, "")).join("; ")}.` : "";
   return {
     name: r.name.trim().slice(0, 200),
     description: `${r.description.trim()}\n\n${credit}${notes}`.slice(0, 5000),
@@ -103,7 +104,7 @@ export function recipeToMealInput(post: InstagramPost, r: ParsedRecipe, opts: { 
       { url: post.permalink, label: `${post.isVideo ? "Reel" : "Post"} by ${by}` },
       ...(post.creatorUrl ? [{ url: post.creatorUrl, label: `${by} on Instagram` }] : []),
     ],
-    categories: [...new Set([...(opts.categories ?? []), ...r.categories])],
+    categories: [...new Set([RECREATED, ...(opts.categories ?? []), ...r.categories])],
     imageUrl: opts.photo !== false ? post.thumbnailUrl : null,
   };
 }

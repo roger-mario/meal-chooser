@@ -8,6 +8,7 @@ import { likeCounts, likedIds } from "@/lib/library";
 import { avatarColors, chf, initials, tileFor } from "@/lib/look";
 import { mealFacts } from "@/lib/meal-facts";
 import { listMeals } from "@/lib/queries";
+import { creatorOf } from "@/lib/creators";
 import { getCurrentUser } from "@/lib/users";
 
 export const dynamic = "force-dynamic";
@@ -44,6 +45,7 @@ export default async function FeedPage() {
         // White text over a dark fade on photos, ink text straight on the pastel tile otherwise.
         const photo = !!m.imageUrl;
         // Imported recipes link back to the creator's original video.
+        const creator = creatorOf(m.links);
         const reel = m.links.find((l) => /instagram\.com\/(reel|p|tv)\//.test(l.url));
         return (
           <article key={m.id} className="relative h-full snap-start snap-always overflow-hidden md:mb-4 md:rounded-[28px]" style={{ backgroundColor: tileFor(m.id) }}>
@@ -58,7 +60,15 @@ export default async function FeedPage() {
               {n > 0 && <span className={`text-xs font-bold ${photo ? "text-white" : "text-ink"}`}>{n}</span>}
             </div>
             <div className={`absolute inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+100px)] space-y-3 px-4 md:bottom-5 ${photo ? "text-white" : "text-ink"}`}>
-              {m.author && (
+              {creator ? (
+                <Link href={`/creators/${creator.handle}`} className="flex items-center gap-2 text-sm font-bold">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-xs font-extrabold text-ink">
+                    {initials(creator.handle)}
+                  </span>
+                  @{creator.handle}
+                  <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${photo ? "bg-white/20" : "bg-white"}`}>Recreated</span>
+                </Link>
+              ) : m.author && (
                 <p className="flex items-center gap-2 text-sm font-bold">
                   <span className="flex h-8 w-8 items-center justify-center rounded-full text-xs font-extrabold" style={{ backgroundColor: bg, color: fg }}>
                     {initials(m.author.name)}
