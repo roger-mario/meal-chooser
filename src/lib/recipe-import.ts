@@ -59,6 +59,8 @@ export async function captionToRecipe(caption: string, creator: string | null): 
       "Read the ingredients with their amounts exactly as written (convert US units: 1 oz = 28 g, 1 lb = 454 g, 1 fl oz = 30 ml).",
       "Ignore calorie/macro claims, hashtags, 'cookbook in bio', follow requests and sponsor codes.",
       "If amounts are for one portion and it says to make several (meal prep), use the batch amounts and that number of servings.",
+      "When an ingredient has no amount, estimate a realistic one (e.g. 30 g shredded lettuce, 1 tbsp sauce) and say so in filledIn.",
+      "Leave quantity empty only for salt, pepper and spices 'to taste' (unit 'to taste').",
     ].join("\n"),
     temperature: 0,
   });
